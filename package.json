@@ -1,0 +1,16 @@
+{
+  "name": "gamelife",
+  "private": true,
+  "description": "Shortcuts for the whole project. Run from the repository root.",
+  "scripts": {
+    "setup": "npm --prefix frontend install",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "mvn -B -q -f backend/pom.xml test",
+    "test:frontend": "npm --prefix frontend test",
+    "build": "npm --prefix frontend run build && mvn -B -q -f backend/pom.xml package -DskipTests",
+    "start": "mvn -B -f backend/pom.xml spring-boot:run",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "backup": "node scripts/backup.mjs",
+    "sprites": "node content/tools/make-placeholder-sprites.mjs"
+  }
+}

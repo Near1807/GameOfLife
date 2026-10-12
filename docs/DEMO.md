@@ -1,0 +1,47 @@
+# Demo: milestones 1 and 2
+
+About 10 minutes. Start with `npm run build` then `npm start`, open <http://localhost:8080> on
+the laptop and `http://<laptop-ip>:8080` on the phone. To start from zero, stop the backend and
+delete `data/gamelife.db`.
+
+## 1. Daily tools and taps (brief 3.1)
+
+1. **Home → how are you?** Tap one face. Expect a gold `+6 XP` pop with `SPI`, the hero lunges,
+   the streak shows `1 day x1.10`. Tap again: nothing more (once per day).
+2. **Home → new task:** type `Study algorithms`, tap `60m`. That's name + one chip. Nothing paid.
+3. **Tasks:** tap ✓ next to it. Expect `+66 XP`. Tap the green ✓ in "done today": the XP is taken
+   back (log shows `undo`). Tap it again: `+66` again. Balance counts it once.
+4. **Tasks → new task:** type `stu`: the autocomplete chip `+ Study algorithms 60m` appears.
+5. **Habits:** type `Read 20 pages`, tap `every day`. Tap ✓: `+22 XP`. It stays ticked for today.
+6. **Home → 💤 rest tomorrow:** one tap. The log shows the planned rest day.
+
+## 2. Focus timer (brief 3.2)
+
+1. **Focus:** tap `10m`. A countdown starts. Close the tab or lock the phone.
+2. Reopen after 10 minutes: the "focus check" question appears on whatever screen opens.
+   Tap **Yes**: `+11 XP` (or more with a streak). Nothing was paid when the timer ended.
+3. Start another, tap **stop early** after 2 minutes, answer Yes: the screen warns it is under the
+   minimum, and nothing is paid.
+4. Try **Tasks → ▶** on an open task, then a length chip: the block is linked to the task, and Yes
+   pays the block and marks the task done (`via focus`) without paying the task a second time.
+
+## 3. Integrity (brief 3.2, 5)
+
+1. **Settings → export backup file.** Open the JSON: every event with its `key`, `prevHash`, `hash`.
+2. Stop the backend, tamper with the database, start again:
+   `sqlite3 data/gamelife.db "UPDATE ledger_events SET xp='999.00' WHERE id=1"`
+   (or any SQLite browser). Reload: a purple banner says the ledger was modified. The app still works.
+3. **Settings → choose file → confirm restore** with the exported file: the banner disappears and
+   the balance is back to its exported value.
+4. Edit the exported file (change one `xp`) and try to restore it: refused, nothing changes.
+
+## 4. Retuning (brief 4)
+
+Change `"habit": { "xp": 20 }` to `50` in `config/gamelife.json`, restart, tick a habit on a new
+day: it pays 50 x streak.
+
+## What is not there yet
+
+Character sheet, levels, achievements, weekly boss, campaign map, weekly review (milestone 3);
+shop, weapon, themes, ascension, pacing script (milestone 4); final pixel art, orbs, confetti,
+content validator, palette-snap tool, style guide, PWA install (milestone 5).
