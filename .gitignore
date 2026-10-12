@@ -1,0 +1,13 @@
+# build output
+backend/target/
+frontend/node_modules/
+frontend/dist/
+node_modules/
+# the live database and local backups (back them up with the export button instead)
+data/
+*.db
+# editors
+.idea/
+.vscode/
+*.iml
+backups/

@@ -1,0 +1,90 @@
+{
+  "_comment": "GameLife tuning file. Every number and formula parameter lives here (brief section 4). Restart the backend after editing. Fields starting with _ are comments.",
+
+  "time": {
+    "zone": "Europe/Brussels",
+    "dayStartHour": 4
+  },
+
+  "stats": [
+    { "id": "STRENGTH",   "name": "Strength",   "hint": "sport" },
+    { "id": "CREATIVITY", "name": "Creativity", "hint": "music, creative projects" },
+    { "id": "INTELLECT",  "name": "Intellect",  "hint": "study, coding" },
+    { "id": "DISCIPLINE", "name": "Discipline", "hint": "focus timer, habits" },
+    { "id": "SOCIAL",     "name": "Social",     "hint": "scouts, friends" },
+    { "id": "VITALITY",   "name": "Vitality",   "hint": "sleep, food" },
+    { "id": "SPIRIT",     "name": "Spirit",     "hint": "mood check-in, rest" }
+  ],
+
+  "todo": {
+    "_comment": "Base XP = xpPerMinute x expected minutes. No upper limit on minutes (brief 6).",
+    "xpPerMinute": 1,
+    "minuteChips": [5, 10, 15, 30, 60, 120],
+    "defaultMinutes": 15,
+    "suggestionCount": 8
+  },
+
+  "timer": {
+    "_comment": "Base XP = xpPerMinute x counted minutes. Counted minutes never exceed planned length.",
+    "xpPerMinute": 1,
+    "minuteChips": [10, 25, 45, 60, 90],
+    "minMinutes": 10,
+    "maxMinutes": 90,
+    "defaultMinutes": 25,
+    "earlyStopMinMinutes": 10,
+    "defaultTags": ["DISCIPLINE"]
+  },
+
+  "habit": {
+    "xp": 20,
+    "defaultTags": ["DISCIPLINE"]
+  },
+
+  "checkin": {
+    "xp": 5,
+    "moodLevels": 5,
+    "defaultTags": ["SPIRIT"]
+  },
+
+  "streak": {
+    "_comment": "multiplier = 1 + factor x streakDays ^ exponent (no cap).",
+    "factor": 0.1,
+    "exponent": 0.5,
+    "freezeEveryCountedDays": 14,
+    "maxFreezes": 2,
+    "maxRestDaysPerWeek": 2,
+    "restDayMaxDaysAhead": 13,
+    "comebackGapDays": 3,
+    "comebackMultiplier": 2
+  },
+
+  "weapon": {
+    "_comment": "Used from milestone 4. multiplier = bonusPerLevel ^ level, cost(n -> n+1) = baseCost x costGrowth ^ n.",
+    "bonusPerLevel": 1.10,
+    "baseCost": 150,
+    "costGrowth": 1.35
+  },
+
+  "ascension": {
+    "_comment": "Used from milestone 4. multiplier = perAscension ^ number of ASCEND events.",
+    "perAscension": 1.05
+  },
+
+  "stages": {
+    "_comment": "Used from milestone 3. target(k) = baseTarget x growth ^ (k - 1).",
+    "count": 10,
+    "baseTarget": 800,
+    "growth": 1.3
+  },
+
+  "statLevels": {
+    "_comment": "Used from milestone 3. XP from level L to L+1 = base x growth ^ (L - 1).",
+    "base": 100,
+    "growth": 1.15
+  },
+
+  "loot": {
+    "_comment": "Used from milestone 4/5. Cosmetic only.",
+    "dropRate": 0.05
+  }
+}

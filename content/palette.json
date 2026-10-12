@@ -1,0 +1,10 @@
+{
+  "_comment": "The shared 32-color palette (brief 12). Every sprite uses only these colors plus full transparency. Built around the dark techie default theme: near-blacks and greys, neon green, neon cyan, a warm gold reserved for rewards, plus red, purple and skin tones.",
+  "contractVersion": 1,
+  "colors": [
+    "#0a0a0f", "#12121a", "#1c1c28", "#2a2a3a", "#3d3d52", "#5a5a75", "#8a8aa8", "#c8c8dc",
+    "#f0f0ff", "#003b1f", "#00703a", "#00b85c", "#39ff88", "#b4ffd2", "#003a4a", "#006f8a",
+    "#00b3d6", "#3ee8ff", "#b8f6ff", "#4a2a00", "#8a5200", "#e09a00", "#ffc23e", "#fff0b0",
+    "#4a0f1e", "#a0203a", "#ff4d6d", "#3a1a5a", "#6b35a8", "#b06dff", "#6b4630", "#d8a080"
+  ]
+}
