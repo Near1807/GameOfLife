@@ -8,9 +8,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/game")
 public class GameController {
     private final GameService game;
+    private final WaveService waves;
 
-    public GameController(GameService game) {
+    public GameController(GameService game, WaveService waves) {
         this.game = game;
+        this.waves = waves;
     }
 
     public record SpotInput(int spot) {}
@@ -41,5 +43,18 @@ public class GameController {
     @PostMapping("/sell")
     public ActionResult sell(@RequestBody SellInput in) {
         return game.sell(in.spot(), in.confirm());
+    }
+
+    /** An extra attempt now, under the same daily cap and "stuck" rule as the automatic ones. */
+    @PostMapping("/run")
+    public ActionResult run() {
+        return waves.runNow();
+    }
+
+    /** The latest attempt (or the one with this key) with its replay. */
+    @GetMapping("/replay")
+    public WaveService.Watch replay(@RequestParam(required = false) String key) {
+        waves.sync();
+        return waves.watch(key);
     }
 }
