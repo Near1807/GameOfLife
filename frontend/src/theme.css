@@ -732,3 +732,12 @@ button { -webkit-user-select: none; user-select: none; }
 .choice-strip span { display: inline-flex; align-items: center; gap: 5px; }
 .item-frame { width: 80px; height: 80px; flex-shrink: 0; display: grid; place-items: center; border-radius: 16px; background: radial-gradient(circle at 50% 60%, rgba(139, 92, 246, 0.28), var(--surface-2) 70%); border: 1px solid var(--border); }
 .item-frame.locked .sprite { filter: brightness(0.25) grayscale(1); }
+
+/* ---------------------------------------------------------------- achievements */
+.badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.badge { display: flex; gap: 12px; padding: 12px; border-radius: var(--radius); background: var(--surface-2); border: 1px solid var(--border); opacity: 0.75; }
+.badge.on { opacity: 1; border-color: rgba(251, 191, 36, 0.4); box-shadow: 0 0 18px rgba(251, 191, 36, 0.12); }
+.badge-icon { width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; display: grid; place-items: center; background: var(--surface); color: var(--text-3); border: 1px solid var(--border); }
+.badge.on .badge-icon, .badge-icon.on { color: var(--gold); background: var(--gold-soft); border-color: rgba(251, 191, 36, 0.4); box-shadow: var(--glow-gold); }
+.unlock { position: fixed; left: 50%; top: 18px; transform: translateX(-50%); z-index: 75; display: flex; gap: 12px; align-items: center; padding: 10px 16px 10px 10px; border-radius: 16px; background: var(--surface-2); backdrop-filter: blur(var(--blur)); -webkit-backdrop-filter: blur(var(--blur)); border: 1px solid rgba(251, 191, 36, 0.45); box-shadow: var(--shadow), var(--glow-gold); animation: unlock-in 0.5s var(--ease); pointer-events: none; }
+@keyframes unlock-in { from { opacity: 0; transform: translate(-50%, -20px) scale(0.9); } to { opacity: 1; transform: translate(-50%, 0); } }

@@ -1,0 +1,390 @@
+{
+  "_comment": "Achievements (brief 8), as data. Each one unlocks when a fact computed from the ledger reaches min. Facts: tasksDone, focusBlocks, focusHours, habitsDone, checkins, bestStreak, kills, ascensions, falls, fullShieldDays, weaponLevel, armorLevel, purchases, itemsOwned, loot, bestDayXp, xpTotal, comebacks, restDays, overallLevel, minStatLevel, balanced, statLevel (with \"stat\"). icon: a Lucide icon name.",
+  "contractVersion": 1,
+  "achievements": [
+    {
+      "id": "first_quest",
+      "name": "First Quest",
+      "description": "Tick your first quest.",
+      "icon": "Swords",
+      "rule": {
+        "fact": "tasksDone",
+        "min": 1
+      }
+    },
+    {
+      "id": "quest_10",
+      "name": "Questing",
+      "description": "Finish 10 quests.",
+      "icon": "Swords",
+      "rule": {
+        "fact": "tasksDone",
+        "min": 10
+      }
+    },
+    {
+      "id": "quest_100",
+      "name": "Centurion",
+      "description": "Finish 100 quests.",
+      "icon": "Swords",
+      "rule": {
+        "fact": "tasksDone",
+        "min": 100
+      }
+    },
+    {
+      "id": "quest_500",
+      "name": "Quest Machine",
+      "description": "Finish 500 quests.",
+      "icon": "Swords",
+      "rule": {
+        "fact": "tasksDone",
+        "min": 500
+      }
+    },
+    {
+      "id": "focus_first",
+      "name": "Deep Dive",
+      "description": "Validate a first focus block.",
+      "icon": "Timer",
+      "rule": {
+        "fact": "focusBlocks",
+        "min": 1
+      }
+    },
+    {
+      "id": "focus_10h",
+      "name": "Ten Hours Deep",
+      "description": "10 hours of validated focus.",
+      "icon": "Timer",
+      "rule": {
+        "fact": "focusHours",
+        "min": 10
+      }
+    },
+    {
+      "id": "focus_100h",
+      "name": "Flow State",
+      "description": "100 hours of validated focus.",
+      "icon": "Timer",
+      "rule": {
+        "fact": "focusHours",
+        "min": 100
+      }
+    },
+    {
+      "id": "habit_30",
+      "name": "Creature of Habit",
+      "description": "Tick habits 30 times.",
+      "icon": "Repeat",
+      "rule": {
+        "fact": "habitsDone",
+        "min": 30
+      }
+    },
+    {
+      "id": "habit_200",
+      "name": "Second Nature",
+      "description": "Tick habits 200 times.",
+      "icon": "Repeat",
+      "rule": {
+        "fact": "habitsDone",
+        "min": 200
+      }
+    },
+    {
+      "id": "checkin_7",
+      "name": "Self Aware",
+      "description": "Check in your mood 7 times.",
+      "icon": "Smile",
+      "rule": {
+        "fact": "checkins",
+        "min": 7
+      }
+    },
+    {
+      "id": "checkin_100",
+      "name": "Inner Compass",
+      "description": "Check in your mood 100 times.",
+      "icon": "Smile",
+      "rule": {
+        "fact": "checkins",
+        "min": 100
+      }
+    },
+    {
+      "id": "streak_7",
+      "name": "On Fire",
+      "description": "Reach a 7-day streak.",
+      "icon": "Flame",
+      "rule": {
+        "fact": "bestStreak",
+        "min": 7
+      }
+    },
+    {
+      "id": "streak_30",
+      "name": "Unstoppable",
+      "description": "Reach a 30-day streak.",
+      "icon": "Flame",
+      "rule": {
+        "fact": "bestStreak",
+        "min": 30
+      }
+    },
+    {
+      "id": "streak_100",
+      "name": "Eternal Flame",
+      "description": "Reach a 100-day streak.",
+      "icon": "Flame",
+      "rule": {
+        "fact": "bestStreak",
+        "min": 100
+      }
+    },
+    {
+      "id": "streak_365",
+      "name": "Year of Fire",
+      "description": "Reach a 365-day streak.",
+      "icon": "Flame",
+      "rule": {
+        "fact": "bestStreak",
+        "min": 365
+      }
+    },
+    {
+      "id": "boss_1",
+      "name": "Bug Squasher",
+      "description": "Defeat your first boss.",
+      "icon": "Skull",
+      "rule": {
+        "fact": "kills",
+        "min": 1
+      }
+    },
+    {
+      "id": "boss_5",
+      "name": "Boss Hunter",
+      "description": "Defeat 5 bosses.",
+      "icon": "Skull",
+      "rule": {
+        "fact": "kills",
+        "min": 5
+      }
+    },
+    {
+      "id": "boss_10",
+      "name": "Campaign Hero",
+      "description": "Defeat 10 bosses.",
+      "icon": "Crown",
+      "rule": {
+        "fact": "kills",
+        "min": 10
+      }
+    },
+    {
+      "id": "ascend_1",
+      "name": "New Game+",
+      "description": "Ascend once.",
+      "icon": "Crown",
+      "rule": {
+        "fact": "ascensions",
+        "min": 1
+      }
+    },
+    {
+      "id": "fall_1",
+      "name": "Got Back Up",
+      "description": "Fall once, and keep playing.",
+      "icon": "HeartPulse",
+      "rule": {
+        "fact": "falls",
+        "min": 1
+      }
+    },
+    {
+      "id": "shield_7",
+      "name": "Iron Wall",
+      "description": "7 fully shielded days.",
+      "icon": "Shield",
+      "rule": {
+        "fact": "fullShieldDays",
+        "min": 7
+      }
+    },
+    {
+      "id": "shield_50",
+      "name": "Fortress",
+      "description": "50 fully shielded days.",
+      "icon": "Shield",
+      "rule": {
+        "fact": "fullShieldDays",
+        "min": 50
+      }
+    },
+    {
+      "id": "weapon_5",
+      "name": "Sharpened",
+      "description": "Raise your weapon to level 5.",
+      "icon": "Sword",
+      "rule": {
+        "fact": "weaponLevel",
+        "min": 5
+      }
+    },
+    {
+      "id": "armor_3",
+      "name": "Plated",
+      "description": "Raise your armour to level 3.",
+      "icon": "Shield",
+      "rule": {
+        "fact": "armorLevel",
+        "min": 3
+      }
+    },
+    {
+      "id": "shopper",
+      "name": "First Purchase",
+      "description": "Buy something in the shop.",
+      "icon": "Coins",
+      "rule": {
+        "fact": "purchases",
+        "min": 1
+      }
+    },
+    {
+      "id": "collector",
+      "name": "Collector",
+      "description": "Own 8 items.",
+      "icon": "Gem",
+      "rule": {
+        "fact": "itemsOwned",
+        "min": 8
+      }
+    },
+    {
+      "id": "lucky",
+      "name": "Lucky Drop",
+      "description": "Find a loot drop.",
+      "icon": "Gift",
+      "rule": {
+        "fact": "loot",
+        "min": 1
+      }
+    },
+    {
+      "id": "xp_day_300",
+      "name": "Big Day",
+      "description": "Earn 300 XP in one day.",
+      "icon": "Zap",
+      "rule": {
+        "fact": "bestDayXp",
+        "min": 300
+      }
+    },
+    {
+      "id": "xp_10k",
+      "name": "Ten Thousand",
+      "description": "Earn 10,000 XP in total.",
+      "icon": "Zap",
+      "rule": {
+        "fact": "xpTotal",
+        "min": 10000
+      }
+    },
+    {
+      "id": "comeback",
+      "name": "Comeback Kid",
+      "description": "Come back after a break and get the bonus.",
+      "icon": "Sparkles",
+      "rule": {
+        "fact": "comebacks",
+        "min": 1
+      }
+    },
+    {
+      "id": "rest_well",
+      "name": "Rest Is Part of It",
+      "description": "Plan 5 rest days.",
+      "icon": "Moon",
+      "rule": {
+        "fact": "restDays",
+        "min": 5
+      }
+    },
+    {
+      "id": "level_10",
+      "name": "Rising",
+      "description": "Reach overall level 10.",
+      "icon": "Star",
+      "rule": {
+        "fact": "overallLevel",
+        "min": 10
+      }
+    },
+    {
+      "id": "all_stats_5",
+      "name": "Well Rounded",
+      "description": "Every stat at level 5 or more.",
+      "icon": "Star",
+      "rule": {
+        "fact": "minStatLevel",
+        "min": 5
+      }
+    },
+    {
+      "id": "balanced",
+      "name": "Balanced",
+      "description": "Earn the Balanced title.",
+      "icon": "Star",
+      "rule": {
+        "fact": "balanced",
+        "min": 1
+      }
+    },
+    {
+      "id": "stat_strength_10",
+      "name": "Iron Body",
+      "description": "Strength level 10.",
+      "icon": "TrendingUp",
+      "rule": {
+        "fact": "statLevel",
+        "stat": "STRENGTH",
+        "min": 10
+      }
+    },
+    {
+      "id": "stat_intellect_10",
+      "name": "Big Brain",
+      "description": "Intellect level 10.",
+      "icon": "TrendingUp",
+      "rule": {
+        "fact": "statLevel",
+        "stat": "INTELLECT",
+        "min": 10
+      }
+    },
+    {
+      "id": "stat_creativity_10",
+      "name": "Muse",
+      "description": "Creativity level 10.",
+      "icon": "TrendingUp",
+      "rule": {
+        "fact": "statLevel",
+        "stat": "CREATIVITY",
+        "min": 10
+      }
+    },
+    {
+      "id": "stat_social_10",
+      "name": "Party Leader",
+      "description": "Social level 10.",
+      "icon": "TrendingUp",
+      "rule": {
+        "fact": "statLevel",
+        "stat": "SOCIAL",
+        "min": 10
+      }
+    }
+  ]
+}

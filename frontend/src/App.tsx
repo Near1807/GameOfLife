@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Coins, LayoutDashboard, ListTodo, Repeat, Settings as SettingsIcon, Swords, Timer, User, WifiOff, Zap } from 'lucide-react';
-import { api, type ActionResult, type Character, type FightView, type GameState, type LedgerEvent, type Meta, type TimerView } from './api';
+import { api, type AchievementStatus, type ActionResult, type Character, type FightView, type GameState, type LedgerEvent, type Meta, type TimerView } from './api';
 import { CampaignScreen } from './screens/CampaignScreen';
 import { HabitsScreen } from './screens/HabitsScreen';
 import { HeroScreen } from './screens/HeroScreen';
@@ -15,6 +15,7 @@ import { FightMoment, type Moment } from './ui/FightOverlays';
 import { ShopScreen } from './screens/ShopScreen';
 import { statStyle } from './stats';
 import { loadSeen, saveSeen } from './seen';
+import { achievementIcon } from './ui/Achievements';
 import { CountUp } from './ui/CountUp';
 import { TimerQuestion } from './ui/TimerQuestion';
 import { XpPops, type Pop } from './ui/XpPops';
@@ -100,6 +101,7 @@ export default function App() {
     try {
       const [s, c] = await Promise.all([api.state(), api.character()]);
       watchFight(lastFight.current, s.fight);
+      watchAchievements();
       lastFight.current = s.fight;
       setState(s);
       setCharacter(c);
@@ -184,6 +186,26 @@ export default function App() {
       fights: Array.from(new Set([...seen.fights, f.fightId])).slice(-50),
     });
   }, [enqueue]);
+
+  /** A toast for each achievement unlocked since this device last looked (shown once). */
+  const watchAchievements = useCallback(() => {
+    api.achievements().then((list) => {
+      const unlocked = list.filter((a) => a.unlocked).map((a) => a.id);
+      let known: string[] | null = null;
+      try { known = JSON.parse(localStorage.getItem('gamelife.achievements') ?? 'null'); } catch { known = null; }
+      if (known) {
+        const fresh = list.filter((a) => a.unlocked && !known!.includes(a.id));
+        fresh.forEach((a, i) => window.setTimeout(() => setUnlock(a), 1600 * i + 400));
+      }
+      try { localStorage.setItem('gamelife.achievements', JSON.stringify(unlocked)); } catch { /* ignore */ }
+    }).catch(() => {});
+  }, []);
+  const [unlock, setUnlock] = useState<AchievementStatus | null>(null);
+  useEffect(() => {
+    if (!unlock) return;
+    const id = window.setTimeout(() => setUnlock(null), 2600);
+    return () => window.clearTimeout(id);
+  }, [unlock]);
 
   // The equipped theme restyles the whole app through its design tokens (brief 10).
   const appliedTokens = useRef<string[]>([]);
@@ -316,7 +338,7 @@ export default function App() {
             )}
             {screen === 'habits' && <HabitsScreen meta={meta} state={state} act={act} version={version} refresh={refresh} onError={showToast} />}
             {screen === 'campaign' && <CampaignScreen state={state} meta={meta} act={act} version={version} />}
-            {screen === 'hero' && character && <HeroScreen character={character} state={state} />}
+            {screen === 'hero' && character && <HeroScreen character={character} state={state} version={version} />}
             {screen === 'settings' && <SettingsScreen settings={settings} onSettings={changeSettings} refresh={refresh}
               onMessage={showToast} fight={state.fight} act={act} openShop={() => setScreen('shop')} />}
           </div>
@@ -335,6 +357,12 @@ export default function App() {
       {!moment && <XpPops pops={pops} />}
       {moment && <FightMoment key={moment.id} m={moment} />}
       {toast && <div className="toast">{toast}</div>}
+      {unlock && (
+        <div className="unlock" role="status">
+          <span className="badge-icon on">{(() => { const I = achievementIcon(unlock.icon); return <I size={20} />; })()}</span>
+          <div><div className="label" style={{ color: 'var(--gold)' }}>Achievement unlocked</div><b>{unlock.name}</b></div>
+        </div>
+      )}
     </div>
   );
 }

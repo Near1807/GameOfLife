@@ -199,6 +199,16 @@ export interface Dashboard {
   bossesDefeated: number;
 }
 
+export interface AchievementStatus {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
+  current: number;
+  target: number;
+}
+
 export interface Stat {
   id: string;
   name: string;
@@ -319,6 +329,7 @@ export const api = {
   upgrade: (slot: 'weapon' | 'armor') => request<ActionResult>('POST', '/api/shop/upgrade', { slot, confirm: true }),
   equip: (itemId: string, on: boolean) => request<ActionResult>('POST', '/api/shop/equip', { itemId, on }),
   content: () => request<Catalog>('GET', '/api/content'),
+  achievements: () => request<AchievementStatus[]>('GET', '/api/achievements'),
   reloadContent: () => request<Catalog>('POST', '/api/content/reload'),
 
   tasks: () => request<TaskView[]>('GET', '/api/tasks'),
