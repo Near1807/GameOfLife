@@ -299,7 +299,31 @@ export interface Watch {
   sameAsRecorded: boolean;
 }
 
+/** Automatic backups (desktop brief 4). */
+export interface BackupEntry { file: string; at: string; reason: string; bytes: number; events: number; valid: boolean; problem: string | null }
+export interface BackupStatus {
+  folder: string; defaultFolder: boolean; lastBackup: string | null; lastValid: boolean | null; stale: boolean;
+  lastError: string | null; backups: BackupEntry[];
+}
+
+/**
+ * Only in the Windows desktop app (desktop/preload.cjs). Undefined in the browser version, where
+ * these settings are hidden.
+ */
+export interface DesktopBridge {
+  dataFolder: string;
+  getStartWithWindows(): Promise<boolean>;
+  setStartWithWindows(on: boolean): Promise<boolean>;
+  chooseFolder(): Promise<string | null>;
+  openFolder(path: string): Promise<void>;
+}
+export const desktop: DesktopBridge | undefined = (globalThis as { gamelifeDesktop?: DesktopBridge }).gamelifeDesktop;
+
 export const api = {
+  backupStatus: () => request<BackupStatus>('GET', '/api/backup/auto'),
+  backupNow: () => request<BackupEntry>('POST', '/api/backup/auto'),
+  setBackupFolder: (folder: string) => request<BackupStatus>('PUT', '/api/backup/folder', { folder }),
+  restoreBackup: (file: string) => request<{ valid: boolean; message: string }>('POST', '/api/backup/restore', { file }),
   game: () => request<DefenseView>('GET', '/api/game'),
   unlockSpot: (spot: number) => request<ActionResult>('POST', '/api/game/unlock', { spot }),
   buildTower: (spot: number, tower: string) => request<ActionResult>('POST', '/api/game/build', { spot, tower }),

@@ -15,11 +15,13 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+  // only this app's own files: other origins are not ours to answer (and the desktop app refuses them)
+  if (url.origin !== self.location.origin) return;
   if (event.request.method !== 'GET' || url.pathname.startsWith('/api/')) return; // never cache the game state
   event.respondWith(
     fetch(event.request)
       .then((res) => {
-        if (res.ok && url.origin === self.location.origin) {
+        if (res.ok) {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(event.request, copy));
         }

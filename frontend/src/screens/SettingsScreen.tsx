@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { AlertTriangle, Download, FolderSync, HardDrive, Palette, SlidersHorizontal, Upload } from 'lucide-react';
 import { useEffect } from 'react';
 import type { Catalog } from '../api';
+import { desktop } from '../api';
+import { BackupCard } from '../ui/BackupCard';
+import { DesktopCard } from '../ui/DesktopCard';
 import { api } from '../api';
 import type { Settings } from '../settings';
 import { Card } from '../ui/Card';
@@ -48,6 +51,8 @@ export function SettingsScreen(props: {
             <button className="btn" onClick={props.openShop}><Palette size={16} /> Themes</button>
           </div>
         </Card>
+        <BackupCard onMessage={props.onMessage} refresh={props.refresh} />
+        {desktop && <DesktopCard />}
         <Card title="Content folder" icon={FolderSync}>
           <p className="small muted" style={{ marginTop: 0 }}>
             {catalog ? `${catalog.heroes.length} hero looks, ${catalog.items.length} shop items. Towers, waves and maps are read again too.` : '…'}

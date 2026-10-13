@@ -5,14 +5,104 @@ feed one append-only XP ledger. Real work produces coins and stat levels; the co
 tower-defense game that plays itself every two hours on the server. A modern dark sci-fi
 interface; the map is vector art, the hero is pixel art.
 
-**Status: version 4.1.** The boss fight is replaced by a deterministic tower-defense game: 8
+**Status: version 4.1, also as a Windows desktop app** (see "Install (Windows desktop app)"). The boss fight is replaced by a deterministic tower-defense game: 8
 towers with two upgrade paths of four tiers each, three maps that open as you progress, automatic
 waves with catch-up, replays, Markets that raise real earnings, stats that power the towers.
 Cosmetic shop, 39 achievements, pacing simulation, content validator, PWA. See `DECISIONS.md` for
 every default and assumption, `docs/DEMO.md` for what to try, `docs/PACING.md` for the simulation,
 and `docs/screenshots/v4/` and `v4.1/` for how it looks.
 
-## Requirements
+## Install (Windows desktop app)
+
+GameLife runs as a normal Windows program: its own window, no browser, no internet, nothing else to
+install (it brings its own small Java runtime).
+
+1. Download `GameLife-Setup-<version>.exe` from the repository's **Releases** page (or from the
+   artifact of the "Windows installer" workflow run).
+2. Double-click it. It installs for your Windows user only, so it **needs no administrator rights**,
+   and puts GameLife in the Start menu and on the desktop. It opens GameLife when it is done.
+3. To remove it: Windows Settings → Apps → GameLife → Uninstall. Your data stays (see below).
+
+**"Windows protected your PC".** The installer is **not signed**: signing needs a paid code-signing
+certificate, which this project does not have. Windows SmartScreen therefore warns about any
+unsigned program it has not seen often. To install anyway: click **More info**, check that the file
+name is `GameLife-Setup-<version>.exe`, then click **Run anyway**. Only do this with an installer
+you downloaded from this repository's own Releases page or Actions run.
+
+**Good to know**
+- One GameLife at a time: opening it again brings the open window to the front.
+- It works with the network completely off. The server inside listens on `127.0.0.1` only, on a
+  free port chosen at each start: nothing on your network (or the internet) can reach it, and the
+  app itself refuses every request that would leave the computer.
+- Settings → **Start with Windows** (off by default) opens GameLife when you sign in, so waves missed
+  while the computer was off are worked out right away. They are also worked out at every start:
+  after days off, every missed attempt is computed once, in order, with the build you had then.
+- If the server cannot start, a window says so and shows the path of the log file
+  (`%APPDATA%\GameLife\logs\server.log`).
+
+### Where my data is
+
+Everything that is yours lives in **`%APPDATA%\GameLife`** (type that in the Explorer address
+bar; usually `C:\Users\<you>\AppData\Roaming\GameLife`), never in the program folder:
+
+| File or folder | What |
+| --- | --- |
+| `gamelife.db` | the database: the whole ledger, quests, habits |
+| `gamelife.json` | the game numbers, which you may edit (restart to apply) |
+| `settings.json` | the backup folder you chose |
+| `backups\` | automatic backups (the default backup folder) |
+| `logs\server.log` | what the server did, for bug reports |
+| `electron\` | the window's own cache |
+
+The program itself is in `%LOCALAPPDATA%\Programs\GameLife` and contains nothing of yours.
+Settings → **Desktop app** shows the data folder and opens it.
+
+### Backups
+
+- **Automatic:** a copy of everything is written when GameLife closes and once a day while it is
+  open. Each one is read back and its hash chain checked. The 14 newest are kept, plus the newest
+  of each of the last 8 weeks; older ones are deleted.
+- **Where:** `%APPDATA%\GameLife\backups` by default. Settings → **Automatic backups** lets you
+  choose another folder (a OneDrive or USB folder is a good idea: a copy that survives the computer).
+- **Status:** Settings shows the last backup, and whether each one verifies. Home shows a warning
+  when the last backup is more than 3 days old.
+- **Restore:** Settings → Automatic backups → **Restore** next to a backup, then tap again to
+  confirm. The file's hash chain is checked first: a damaged file changes nothing. Your data from
+  just before the restore is backed up first, so a restore can be undone.
+- A manual export and the "choose a file" restore are still under Settings → **Backup**.
+
+### Updating
+
+Download and run the newer `GameLife-Setup-<version>.exe`. It replaces the program and never touches
+`%APPDATA%\GameLife`: your database, backups and settings stay. Your `gamelife.json` is merged with
+the new version's numbers: a number you changed keeps your value, a number you never touched takes
+the new default, new settings are added. Close GameLife first (the installer asks if it is open).
+
+### Build the installer yourself (Windows)
+
+On a Windows 10 or 11 computer with **JDK 21** (for example Eclipse Temurin, with `JAVA_HOME` set),
+**Maven 3.9+**, **Node.js 22** and Git:
+
+```powershell
+git clone <this repository> GameLife
+cd GameLife
+npm run setup             # frontend packages
+npm run desktop:setup     # Electron and electron-builder (downloads Electron for Windows)
+npm run desktop:dist      # build + icon + staging + jlink runtime + NSIS installer
+```
+
+The installer is `desktop\dist\GameLife-Setup-<version>.exe`. `npm run desktop:test` runs the
+desktop shell tests (server start and stop, local-only port, data folder, offline, the jlink
+runtime, and the Electron window). To try the shell without building an installer:
+`npm run build`, then `npm run desktop` (it uses the `java` on your PATH and a separate
+`%APPDATA%\GameLife-dev` data folder, so it never touches your real data).
+
+**GitHub Actions** builds the same installer on `windows-latest`
+(`.github/workflows/windows-installer.yml`), runs every test there, and attaches the `.exe` to a
+release when a version tag is pushed (`git tag v0.4.1 && git push origin v0.4.1`). "Run workflow" in
+the Actions tab builds it without a release (download it from the run's artifacts).
+
+## Requirements (development)
 
 | Tool | Version | Check with |
 | --- | --- | --- |
@@ -20,7 +110,7 @@ and `docs/screenshots/v4/` and `v4.1/` for how it looks.
 | Maven | 3.9+ | `mvn -v` |
 | Node.js | 20+ (tested with 22) | `node -v` |
 
-## Install (once)
+## Install for development (once)
 
 ```bash
 npm run setup          # = cd frontend && npm install
@@ -28,7 +118,7 @@ npm run setup          # = cd frontend && npm install
 
 Maven downloads the backend libraries by itself on the first run.
 
-## Run
+## Run in the browser (development, or on your phone)
 
 The backend serves the API, the built frontend and the content pictures on **one port (8080)**.
 
@@ -40,7 +130,7 @@ npm start              # starts the backend (Ctrl+C to stop)
 - **Laptop:** open <http://localhost:8080>.
 - **Phone (same Wi-Fi):** open `http://<your-laptop-ip>:8080`, then use the browser's "Add to Home screen" to install it as an app.
 - **No login:** single user (brief 3.3). Use it only on your own network or through a private tunnel.
-- **Data:** `data/gamelife.db`, one SQLite file.
+- **Data:** `data/gamelife.db`, one SQLite file; automatic backups in `data/backups` (the desktop app uses `%APPDATA%\GameLife` instead).
 - **Numbers:** all of them live in `config/gamelife.json`. Edit the file, then restart.
 
 ### Dev mode (hot reload while editing the frontend)
@@ -173,6 +263,7 @@ backend/    Spring Boot (Java 21), SQLite through JdbcTemplate, no ORM
     rules/        streak, freezes, stat split, levels
     tasks/ timer/ habits/ checkin/ rest/   the daily tools
     character/ review/ state/ backup/
+desktop/    Electron shell for Windows: starts the server, window, installer (electron-builder)
 frontend/   React + TypeScript + Vite (PWA)
   src/ui/DefenseMap.tsx    the map canvas and replay playback
   src/screens/             home (map), quests, focus, habits, review (week, stats), shop, hero, settings

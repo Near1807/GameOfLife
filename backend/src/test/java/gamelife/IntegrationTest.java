@@ -23,7 +23,9 @@ import java.time.ZoneId;
  */
 @SpringBootTest(properties = {
         "gamelife.db-path=target/test-data/gamelife-test.db",
-        "gamelife.config-path=../config/gamelife.json"
+        "gamelife.config-path=../config/gamelife.json",
+        "gamelife.data-dir=target/test-data/data",
+        "gamelife.backup.check-delay-ms=3600000000"
 })
 @Import(IntegrationTest.ClockConfig.class)
 public abstract class IntegrationTest {

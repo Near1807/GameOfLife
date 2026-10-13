@@ -11,3 +11,6 @@ data/
 .vscode/
 *.iml
 backups/
+# desktop app build output
+desktop/stage/
+desktop/dist/
