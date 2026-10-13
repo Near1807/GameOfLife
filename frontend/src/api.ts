@@ -247,7 +247,13 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
 // ---------------------------------------------------------------- tower defense (v4)
 
-export interface PathView { name: string; tier: number; locked: boolean; price: number | null; next: string | null; tiers: string[] }
+/** needs: the stat level the next tier requires and you lack (tier 4), e.g. "Needs Intellect 10". */
+export interface PathView {
+  name: string; tier: number; locked: boolean; price: number | null; next: string | null; tiers: string[]; needs: string | null;
+}
+
+/** A map (chapter). unlocked once the furthest wave reaches unlockAfterWave. */
+export interface MapChoice { id: string; name: string; spots: number; unlockAfterWave: number; unlocked: boolean; active: boolean }
 
 export interface TowerView {
   type: string; name: string; kind: string; role: 'attack' | 'support' | 'income'; color: string; shape: string;
@@ -278,6 +284,7 @@ export interface DefenseView {
   balance: number; incomeMultiplier: number; discount: number; nextSpotCost: number;
   last: AttemptView | null; recent: AttemptView[]; enemies: Record<string, EnemyView>; stats: Record<string, number>;
   statEffects: { stat: string; boosts: string; now: string; unlocks: string[] }[];
+  maps: MapChoice[];
 }
 
 /** One replay sample. enemies: [id, x, y, hp %, flags 1 slowed 2 burning 4 poisoned]. */
@@ -299,6 +306,7 @@ export const api = {
   upgradeTower: (spot: number, path: number, tier: number) =>
     request<ActionResult>('POST', '/api/game/upgrade', { spot, path, tier }),
   sellTower: (spot: number) => request<ActionResult>('POST', '/api/game/sell', { spot, confirm: true }),
+  moveMap: (map: string) => request<ActionResult>('POST', '/api/game/move', { map, confirm: true }),
   runWave: () => request<ActionResult>('POST', '/api/game/run'),
   replay: (key?: string) => request<Watch>('GET', '/api/game/replay' + (key ? `?key=${encodeURIComponent(key)}` : '')),
 

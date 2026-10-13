@@ -1,5 +1,15 @@
 # Demo
 
+## Version 4.1 (maps, tier 4)
+
+1. **Tier 4:** take a tower to tier 3 of a path. The fourth pip shows "Needs Strength 10" (or the
+   tower's stat) until the stat reaches that level, then it can be bought like any tier.
+2. **Maps:** over the map, chips list the maps. Map 2 says "after wave 30" until then. Once open,
+   tap "Move to Circuit Switchback": it turns into "Tap again: move, +N refund". Tap again: every
+   tower is sold for what it cost, the bigger map appears with as many spots open as you had
+   bought, and the wave count goes on.
+3. **Hero:** each stat lists the towers and the tier 4s it unlocks.
+
 ## Version 4 (tower defense)
 
 Use a throwaway database (`--gamelife.db-path=../data/test.db`, see the README).

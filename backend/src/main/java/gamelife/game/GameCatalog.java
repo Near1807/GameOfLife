@@ -24,7 +24,8 @@ public record GameCatalog(Map<String, TowerDef> towers, Map<String, EnemyDef> en
     /** One change of a tier: "mul" multiplies the stat, "add" adds to it, "set" replaces it. */
     public record Change(String stat, String op, double value) {}
 
-    public record Tier(int cost, String description, List<Change> changes) {}
+    /** requires: a stat level needed to buy this tier (tier 4), or null. */
+    public record Tier(int cost, String description, List<Change> changes, Requirement requires) {}
 
     public record UpgradePath(String name, List<Tier> tiers) {}
 
@@ -68,6 +69,11 @@ public record GameCatalog(Map<String, TowerDef> towers, Map<String, EnemyDef> en
         return maps.get(0);
     }
 
+    /** The map with this id, or the first map when the id is unknown (a deleted map file). */
+    public MapDef map(String id) {
+        return maps.stream().filter(m -> m.id().equals(id)).findFirst().orElse(maps.get(0));
+    }
+
     // ------------------------------------------------------------------ loading
 
     private static final ObjectMapper JSON = new ObjectMapper()
@@ -101,7 +107,9 @@ public record GameCatalog(Map<String, TowerDef> towers, Map<String, EnemyDef> en
                         String op = f.getValue().fieldNames().next();
                         changes.add(new Change(f.getKey(), op, number(f.getValue().get(op))));
                     });
-                    tiers.add(new Tier(tier.path("cost").asInt(), tier.path("description").asText(), changes));
+                    JsonNode treq = tier.path("requires");
+                    tiers.add(new Tier(tier.path("cost").asInt(), tier.path("description").asText(), changes,
+                            treq.isObject() ? new Requirement(treq.path("stat").asText(), treq.path("level").asInt()) : null));
                 }
                 paths.add(new UpgradePath(p.path("name").asText(), tiers));
             }

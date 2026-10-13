@@ -1,5 +1,5 @@
 {
-  "_comment": "Tower catalogue (v4 brief 2), ported from the prototype. Each tier lists stat changes: mul multiplies, add adds, set replaces. role: attack, support (Banner aura) or income (Market). requires: a stat level needed to build. Adding a tower or a path is a data change.",
+  "_comment": "Tower catalogue (v4 brief 2), ported from the prototype. Each tier lists stat changes: mul multiplies, add adds, set replaces. A tier may have requires {stat, level}: tier 4 of every path needs a stat level. role: attack, support (Banner aura) or income (Market). requires on a tower: a stat level needed to build it. Adding a tower or a path is a data change.",
   "contractVersion": 1,
   "towers": [
     {
@@ -73,6 +73,22 @@
                   "set": 0.5
                 }
               }
+            },
+            {
+              "cost": 1300,
+              "description": "+80% damage, +30 range",
+              "set": {
+                "dmg": {
+                  "mul": 1.8
+                },
+                "range": {
+                  "add": 30
+                }
+              },
+              "requires": {
+                "stat": "STRENGTH",
+                "level": 10
+              }
             }
           ]
         },
@@ -107,6 +123,22 @@
                 "multi": {
                   "set": 2
                 }
+              }
+            },
+            {
+              "cost": 1200,
+              "description": "+60% fire rate, hits 3 targets",
+              "set": {
+                "rate": {
+                  "mul": 1.6
+                },
+                "multi": {
+                  "set": 3
+                }
+              },
+              "requires": {
+                "stat": "STRENGTH",
+                "level": 10
               }
             }
           ]
@@ -185,6 +217,22 @@
                   "add": 15
                 }
               }
+            },
+            {
+              "cost": 2000,
+              "description": "+80% damage, bigger blast",
+              "set": {
+                "dmg": {
+                  "mul": 1.8
+                },
+                "rad": {
+                  "add": 15
+                }
+              },
+              "requires": {
+                "stat": "STRENGTH",
+                "level": 10
+              }
             }
           ]
         },
@@ -219,6 +267,19 @@
                 "rad": {
                   "add": 15
                 }
+              }
+            },
+            {
+              "cost": 1750,
+              "description": "+60% fire rate",
+              "set": {
+                "rate": {
+                  "mul": 1.6
+                }
+              },
+              "requires": {
+                "stat": "STRENGTH",
+                "level": 10
               }
             }
           ]
@@ -294,6 +355,22 @@
                   "mul": 5
                 }
               }
+            },
+            {
+              "cost": 1250,
+              "description": "Slow 85%, x2 damage",
+              "set": {
+                "slow": {
+                  "set": 0.85
+                },
+                "dmg": {
+                  "mul": 2
+                }
+              },
+              "requires": {
+                "stat": "SPIRIT",
+                "level": 10
+              }
             }
           ]
         },
@@ -331,6 +408,25 @@
                 "dmg": {
                   "mul": 3
                 }
+              }
+            },
+            {
+              "cost": 1500,
+              "description": "Giant area, x2 damage, lasts longer",
+              "set": {
+                "rad": {
+                  "set": 140
+                },
+                "dmg": {
+                  "mul": 2
+                },
+                "slowT": {
+                  "set": 3
+                }
+              },
+              "requires": {
+                "stat": "SPIRIT",
+                "level": 10
               }
             }
           ]
@@ -409,6 +505,25 @@
                   "mul": 1.5
                 }
               }
+            },
+            {
+              "cost": 1900,
+              "description": "Firestorm: 50/s, +50% damage, wide splash",
+              "set": {
+                "burn": {
+                  "set": 50
+                },
+                "dmg": {
+                  "mul": 1.5
+                },
+                "rad": {
+                  "set": 70
+                }
+              },
+              "requires": {
+                "stat": "INTELLECT",
+                "level": 10
+              }
             }
           ]
         },
@@ -446,6 +561,19 @@
                 "pierce": {
                   "set": 1
                 }
+              }
+            },
+            {
+              "cost": 1950,
+              "description": "x2 damage",
+              "set": {
+                "dmg": {
+                  "mul": 2
+                }
+              },
+              "requires": {
+                "stat": "INTELLECT",
+                "level": 10
               }
             }
           ]
@@ -521,6 +649,22 @@
                   "mul": 1.4
                 }
               }
+            },
+            {
+              "cost": 2250,
+              "description": "Jumps to 3 more enemies, +50% damage",
+              "set": {
+                "chain": {
+                  "add": 3
+                },
+                "dmg": {
+                  "mul": 1.5
+                }
+              },
+              "requires": {
+                "stat": "INTELLECT",
+                "level": 12
+              }
             }
           ]
         },
@@ -558,6 +702,22 @@
                 "pierce": {
                   "set": 0.5
                 }
+              }
+            },
+            {
+              "cost": 2200,
+              "description": "+90% damage, +20 range",
+              "set": {
+                "dmg": {
+                  "mul": 1.9
+                },
+                "range": {
+                  "add": 20
+                }
+              },
+              "requires": {
+                "stat": "INTELLECT",
+                "level": 12
               }
             }
           ]
@@ -633,6 +793,22 @@
                   "set": true
                 }
               }
+            },
+            {
+              "cost": 1950,
+              "description": "Poison 45/s, hits 3 targets",
+              "set": {
+                "pois": {
+                  "set": 45
+                },
+                "multi": {
+                  "set": 3
+                }
+              },
+              "requires": {
+                "stat": "VITALITY",
+                "level": 10
+              }
             }
           ]
         },
@@ -670,6 +846,22 @@
                 "pslow": {
                   "set": 0.2
                 }
+              }
+            },
+            {
+              "cost": 1950,
+              "description": "Poison 80/s, slows 35%",
+              "set": {
+                "pois": {
+                  "set": 80
+                },
+                "pslow": {
+                  "set": 0.35
+                }
+              },
+              "requires": {
+                "stat": "VITALITY",
+                "level": 10
               }
             }
           ]
@@ -742,6 +934,22 @@
                   "set": 0.3
                 }
               }
+            },
+            {
+              "cost": 2120,
+              "description": "Nearby fire rate +45%, +20 range",
+              "set": {
+                "rbuff": {
+                  "set": 0.45
+                },
+                "range": {
+                  "add": 20
+                }
+              },
+              "requires": {
+                "stat": "SOCIAL",
+                "level": 10
+              }
             }
           ]
         },
@@ -776,6 +984,19 @@
                 "dbuff": {
                   "set": 0.35
                 }
+              }
+            },
+            {
+              "cost": 2120,
+              "description": "Nearby damage +50%",
+              "set": {
+                "dbuff": {
+                  "set": 0.5
+                }
+              },
+              "requires": {
+                "stat": "SOCIAL",
+                "level": 10
               }
             }
           ]
@@ -842,6 +1063,19 @@
                   "set": 0.25
                 }
               }
+            },
+            {
+              "cost": 2500,
+              "description": "Earnings bonus 35%",
+              "set": {
+                "coin": {
+                  "set": 0.35
+                }
+              },
+              "requires": {
+                "stat": "SOCIAL",
+                "level": 10
+              }
             }
           ]
         },
@@ -873,6 +1107,19 @@
                 "disc": {
                   "set": 0.15
                 }
+              }
+            },
+            {
+              "cost": 2500,
+              "description": "Everything costs 22% less",
+              "set": {
+                "disc": {
+                  "set": 0.22
+                }
+              },
+              "requires": {
+                "stat": "CREATIVITY",
+                "level": 10
               }
             }
           ]

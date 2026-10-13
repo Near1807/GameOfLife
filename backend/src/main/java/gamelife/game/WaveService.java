@@ -69,8 +69,8 @@ public class WaveService {
             return;
         }
         Duration interval = Duration.ofMinutes(config.game().waveIntervalMinutes());
-        List<GameLedger.Snapshot> timeline = GameLedger.timeline(events, content.map().freeSpots(), config);
-        GameLedger.State state = GameLedger.derive(events, content.map().freeSpots());
+        List<GameLedger.Snapshot> timeline = GameLedger.timeline(events, content.catalog(), config);
+        GameLedger.State state = GameLedger.derive(events, content.catalog());
         List<GameLedger.Attempt> attempts = new ArrayList<>(state.attempts());
         int wave = state.wave();
         Instant now = time.now();
@@ -79,11 +79,11 @@ public class WaveService {
         for (Instant slot = anchor.plus(interval.multipliedBy(k)); !slot.isAfter(now);
              slot = slot.plus(interval)) {
             GameLedger.Snapshot snap = GameLedger.at(timeline, slot);
-            String inputs = inputs(wave, snap.build(), snap.stats());
+            String inputs = inputs(wave, snap.map(), snap.build(), snap.stats());
             if (attemptsOn(attempts, time.gameDay(slot)) >= config.game().maxAttemptsPerDay() || stuck(attempts, inputs)) {
                 continue;
             }
-            GameLedger.Attempt a = attempt(wave, attempts, snap.build(), snap.stats(), inputs, slot, false);
+            GameLedger.Attempt a = attempt(wave, attempts, snap.map(), snap.build(), snap.stats(), inputs, slot, false);
             attempts.add(a);
             if (a.won()) {
                 wave++;
@@ -106,10 +106,10 @@ public class WaveService {
         if ("capped".equals(s.status())) {
             throw GameException.conflict("No more attempts today (" + config.game().maxAttemptsPerDay() + " a day).");
         }
-        GameLedger.Snapshot now = GameLedger.at(GameLedger.timeline(events, content.map().freeSpots(), config),
+        GameLedger.Snapshot now = GameLedger.at(GameLedger.timeline(events, content.catalog(), config),
                 time.now());
-        GameLedger.State state = GameLedger.derive(events, content.map().freeSpots());
-        GameLedger.Attempt a = attempt(state.wave(), state.attempts(), now.build(), now.stats(), s.inputs(),
+        GameLedger.State state = GameLedger.derive(events, content.catalog());
+        GameLedger.Attempt a = attempt(state.wave(), state.attempts(), now.map(), now.build(), now.stats(), s.inputs(),
                 time.now(), true);
         return new ActionResult(ledger.find(a.key()).orElse(null), true,
                 (a.won() ? "Wave " + a.wave() + " cleared" : "Wave " + a.wave() + " failed"));
@@ -118,10 +118,10 @@ public class WaveService {
     /** Where the schedule stands now (after sync). */
     public Status status(List<LedgerEvent> events) {
         Instant anchor = anchor(events);
-        GameLedger.State state = GameLedger.derive(events, content.map().freeSpots());
-        GameLedger.Snapshot snap = GameLedger.at(GameLedger.timeline(events, content.map().freeSpots(), config),
+        GameLedger.State state = GameLedger.derive(events, content.catalog());
+        GameLedger.Snapshot snap = GameLedger.at(GameLedger.timeline(events, content.catalog(), config),
                 time.now());
-        String inputs = inputs(state.wave(), snap.build(), snap.stats());
+        String inputs = inputs(state.wave(), snap.map(), snap.build(), snap.stats());
         int today = attemptsOn(state.attempts(), time.today());
         if (anchor == null) {
             return new Status("idle", null, today, inputs);
@@ -149,7 +149,7 @@ public class WaveService {
 
     public synchronized Watch watch(String key) {
         List<LedgerEvent> events = ledger.all();
-        List<GameLedger.Attempt> attempts = GameLedger.derive(events, content.map().freeSpots()).attempts();
+        List<GameLedger.Attempt> attempts = GameLedger.derive(events, content.catalog()).attempts();
         GameLedger.Attempt a = key == null || key.isBlank()
                 ? (attempts.isEmpty() ? null : attempts.get(attempts.size() - 1))
                 : attempts.stream().filter(x -> x.key().equals(key)).findFirst().orElse(null);
@@ -176,15 +176,16 @@ public class WaveService {
         }
         Map<String, Integer> stats = new TreeMap<>();
         ((Map<String, Object>) meta.get("stats")).forEach((k, v) -> stats.put(k, ((Number) v).intValue()));
-        return Simulator.simulate(content.map(), build, stats, ((Number) meta.get("wave")).intValue(),
+        GameCatalog.MapDef map = content.catalog().map(String.valueOf(meta.getOrDefault("map", "")));
+        return Simulator.simulate(map, build, stats, ((Number) meta.get("wave")).intValue(),
                 content.catalog(), config.game(), true);
     }
 
     // ------------------------------------------------------------------ helpers
 
-    private GameLedger.Attempt attempt(int wave, List<GameLedger.Attempt> attempts, Build build,
+    private GameLedger.Attempt attempt(int wave, List<GameLedger.Attempt> attempts, GameCatalog.MapDef map, Build build,
                                        Map<String, Integer> stats, String inputs, Instant at, boolean manual) {
-        Simulator.Result r = Simulator.simulate(content.map(), build, stats, wave, content.catalog(),
+        Simulator.Result r = Simulator.simulate(map, build, stats, wave, content.catalog(),
                 config.game(), true);
         int n = (int) attempts.stream().filter(x -> x.wave() == wave).count() + 1;
         String key = "wave-attempt:" + wave + ":" + n;
@@ -195,7 +196,7 @@ public class WaveService {
         meta.put("attempt", n);
         meta.put("at", at.toString());
         meta.put("manual", manual);
-        meta.put("map", content.map().id());
+        meta.put("map", map.id());
         meta.put("inputs", inputs);
         meta.put("towers", towers);
         meta.put("stats", stats);
@@ -210,17 +211,17 @@ public class WaveService {
                 Money.ZERO, Money.ZERO, Map.of(), meta));
         recent.put(key, r);
         // read back what was stored, so the attempt carries the same meta as one derived later
-        return GameLedger.derive(List.of(ledger.find(key).orElseThrow()), 0).lastAttempt();
+        return GameLedger.derive(List.of(ledger.find(key).orElseThrow()), content.catalog()).lastAttempt();
     }
 
     /**
-     * What decides a wave's outcome: the wave, the attacking towers and Banners with their tiers, the
+     * What decides a wave's outcome: the wave, the map, the attacking towers and Banners with their tiers, the
      * stats the simulation uses, and the rules (config + data files). Currency, Markets, Social and
      * Creativity cannot change a result, so they are left out: changing only them would replay the
      * same failure.
      */
-    String inputs(int wave, Build build, Map<String, Integer> stats) {
-        StringBuilder sb = new StringBuilder("w").append(wave).append('|');
+    String inputs(int wave, GameCatalog.MapDef map, Build build, Map<String, Integer> stats) {
+        StringBuilder sb = new StringBuilder("w").append(wave).append('|').append(map.id()).append('|');
         build.towers().forEach((spot, t) -> {
             if (!"income".equals(content.catalog().tower(t.type()).role())) {
                 sb.append(spot).append(':').append(t.type()).append(':').append(t.a()).append(':').append(t.b()).append(';');

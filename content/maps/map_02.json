@@ -1,0 +1,130 @@
+{
+  "_comment": "A map (v4): the path from spawn to base and the tower spots in a 960x540 field, best spots first. The first freeSpots are open; bought spots carry over between maps (the first N spots of this map open). unlockAfterWave: the furthest wave to clear before this map can be chosen.",
+  "contractVersion": 1,
+  "id": "map_02",
+  "name": "Circuit Switchback",
+  "width": 960,
+  "height": 540,
+  "freeSpots": 3,
+  "unlockAfterWave": 30,
+  "path": [
+    [
+      -20,
+      80
+    ],
+    [
+      860,
+      80
+    ],
+    [
+      860,
+      270
+    ],
+    [
+      110,
+      270
+    ],
+    [
+      110,
+      450
+    ],
+    [
+      980,
+      450
+    ]
+  ],
+  "base": [
+    940,
+    450
+  ],
+  "spots": [
+    [
+      180,
+      360
+    ],
+    [
+      790,
+      170
+    ],
+    [
+      780,
+      350
+    ],
+    [
+      250,
+      350
+    ],
+    [
+      310,
+      370
+    ],
+    [
+      370,
+      350
+    ],
+    [
+      430,
+      370
+    ],
+    [
+      490,
+      350
+    ],
+    [
+      550,
+      370
+    ],
+    [
+      610,
+      350
+    ],
+    [
+      670,
+      370
+    ],
+    [
+      750,
+      220
+    ],
+    [
+      180,
+      180
+    ],
+    [
+      250,
+      170
+    ],
+    [
+      320,
+      170
+    ],
+    [
+      390,
+      170
+    ],
+    [
+      460,
+      170
+    ],
+    [
+      530,
+      170
+    ],
+    [
+      600,
+      170
+    ],
+    [
+      670,
+      170
+    ],
+    [
+      840,
+      370
+    ],
+    [
+      110,
+      170
+    ]
+  ]
+}

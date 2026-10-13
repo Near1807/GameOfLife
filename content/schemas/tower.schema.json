@@ -98,6 +98,22 @@
                       },
                       "set": {
                         "type": "object"
+                      },
+                      "requires": {
+                        "type": "object",
+                        "required": [
+                          "stat",
+                          "level"
+                        ],
+                        "properties": {
+                          "stat": {
+                            "type": "string"
+                          },
+                          "level": {
+                            "type": "integer",
+                            "minimum": 1
+                          }
+                        }
                       }
                     }
                   }

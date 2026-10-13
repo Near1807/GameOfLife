@@ -16,9 +16,15 @@ class SimulatorTest {
     static final Build MIXED = build(0, "archer", 2, 0, 1, "cannon", 0, 1, 2, "frost", 1, 0, 3, "mage", 0, 1);
     static final Build ADVANCED = build(0, "tesla", 1, 0, 1, "venom", 0, 2, 2, "mage", 2, 0, 3, "banner", 0, 1,
             5, "archer", 0, 3);
+    /** On the second map, with tier-4 towers (v4.1). */
+    static final Build LATE = buildOn(GameFixtures.CAT.map("map_02"), 0, "tesla", 0, 4, 1, "mage", 4, 0, 2, "cannon", 4, 0,
+            3, "frost", 0, 4, 4, "archer", 0, 4, 5, "venom", 4, 0, 6, "banner", 0, 4, 7, "cannon", 4, 0);
 
     @Test
     void sameInputsGiveIdenticalResultsAndReplays() throws Exception {
+        String late1 = JSON.writeValueAsString(Simulator.simulate(CAT.map("map_02"), LATE, stats(12), 40, CAT, G, true));
+        String late2 = JSON.writeValueAsString(Simulator.simulate(CAT.map("map_02"), LATE, stats(12), 40, CAT, G, true));
+        assertEquals(late1, late2);
         for (Build b : new Build[]{THREE_ARCHERS, MIXED, ADVANCED}) {
             for (int wave : new int[]{1, 7, 10}) {
                 String first = JSON.writeValueAsString(run(b, stats(6), wave));
@@ -31,15 +37,32 @@ class SimulatorTest {
     /** won, lives left, killed, leaked, seconds: fixed numbers for 3 builds on waves 1, 5 and 10. */
     @Test
     void goldenResults() {
-        golden(THREE_ARCHERS, 1, true, 11, 6, 0, 8.88);
-        golden(THREE_ARCHERS, 5, true, 1, 8, 10, 49.7);
-        golden(THREE_ARCHERS, 10, false, 0, 6, 11, 35.67);
-        golden(MIXED, 1, true, 11, 6, 0, 4.28);
-        golden(MIXED, 5, true, 11, 18, 0, 19.58);
-        golden(MIXED, 10, true, 3, 30, 4, 95.15);
-        golden(ADVANCED, 1, true, 11, 6, 0, 4.4);
-        golden(ADVANCED, 5, true, 11, 18, 0, 16.07);
+        golden(THREE_ARCHERS, 1, true, 11, 6, 0, 7.25);
+        golden(THREE_ARCHERS, 5, true, 6, 13, 5, 49.7);
+        golden(THREE_ARCHERS, 10, false, 0, 14, 11, 39.52);
+        golden(MIXED, 1, true, 11, 6, 0, 3.78);
+        golden(MIXED, 5, true, 11, 18, 0, 17.5);
+        golden(MIXED, 10, true, 6, 33, 1, 96.28);
+        golden(ADVANCED, 1, true, 11, 6, 0, 4.0);
+        golden(ADVANCED, 5, true, 11, 18, 0, 15.22);
         golden(ADVANCED, 10, true, 6, 33, 1, 88.98);
+    }
+
+    /** A tier-4 build on the second map, every stat at level 12 (v4.1). */
+    @Test
+    void goldenResultsOnTheSecondMapWithTier4() {
+        goldenLate(30, true, 13, 78, 0, 115.17);
+        goldenLate(50, true, 8, 119, 1, 190.45);
+        goldenLate(70, false, 0, 3, 13, 71.58);
+    }
+
+    private void goldenLate(int wave, boolean won, int lives, int killed, int leaked, double seconds) {
+        Simulator.Result r = Simulator.simulate(CAT.map("map_02"), LATE, stats(12), wave, CAT, G, false);
+        assertEquals(won, r.won(), "wave " + wave);
+        assertEquals(lives, r.lives(), "wave " + wave);
+        assertEquals(killed, r.killed(), "wave " + wave);
+        assertEquals(leaked, r.leaked(), "wave " + wave);
+        assertEquals(seconds, r.seconds(), 1e-9, "wave " + wave);
     }
 
     private void golden(Build b, int wave, boolean won, int lives, int killed, int leaked, double seconds) {
@@ -136,15 +159,17 @@ class SimulatorTest {
     @Test
     void spiritRaisesSlowUpToTheCap() {
         Build b = build(1, "frost", 3, 0);
-        assertEquals(0.75 + 0.004 * 5, GameMath.effective(1, b, CAT, MAP, stats(6), G).slow, 1e-9);
+        assertEquals(0.75 + G.spiritSlowPerLevel() * 5, GameMath.effective(1, b, CAT, MAP, stats(6), G).slow, 1e-9);
         assertEquals(G.maxSlow(), GameMath.effective(1, b, CAT, MAP, stats(100), G).slow, 1e-9);
     }
 
     @Test
     void burnDamagesOverTime() {
+        // a wave one Mage cannot finish, and lives enough for everyone to walk through: all damage counts
+        var lots = game(Map.of("baseLives", 1000));
         Build fire = build(1, "mage", 1, 0);
-        Simulator.Result burning = Simulator.simulate(MAP, fire, stats(6), 3, CAT, G, true);
-        Simulator.Result noBurn = Simulator.simulate(MAP, build(1, "mage", 0, 0), stats(6), 3, CAT, G, true);
+        Simulator.Result burning = Simulator.simulate(MAP, fire, stats(1), 8, CAT, lots, true);
+        Simulator.Result noBurn = Simulator.simulate(MAP, build(1, "mage", 0, 0), stats(1), 8, CAT, lots, true);
         assertTrue(burning.damage().get(1) > noBurn.damage().get(1));
         assertTrue(burning.replay().frames().stream().anyMatch(f -> f.enemies().stream().anyMatch(e -> (e[4] & 2) != 0)));
     }

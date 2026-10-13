@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * Pacing simulation (v4 brief 6): three players play the tower-defense map for a year with the real
@@ -28,9 +29,10 @@ import java.util.TreeMap;
  *   average  100 base XP every day
  *   strong   200 base XP every day
  *
- * Every day: the day's XP is paid (coins = XP x income), split equally over the seven stats; then
- * the player spends greedily; then the day's 12 automatic attempts run, stopping when a wave fails
- * with nothing changed (stuck), exactly like the server.
+ * Every day: the day's XP is paid (coins = XP x income), split equally over the seven stats; when a
+ * newer map has opened, the player moves there (selling everything for a full refund, as the app
+ * does); then the player spends greedily; then the day's 12 automatic attempts run, stopping when a
+ * wave fails with nothing changed (stuck), exactly like the server.
  *
  * Greedy spending: while something is affordable, buy the option that most improves the current
  * wave per coin (each option is tried with the real simulation on that wave). A Market is bought
@@ -65,18 +67,20 @@ public final class PacingSimulation {
      */
     public record Report(Profile profile, Map<Integer, Integer> waveOnDay, int firstStuckDay, int longestStall,
                          int lastPurchaseDay, int purchases, double coinsEarned, double incomeMultiplier,
-                         Map<String, Integer> towers, int openSpots, int optionsLeft) {}
+                         Map<String, Integer> towers, int openSpots, int optionsLeft, String map,
+                         Map<Integer, String> moves, int lastNewWaveDay) {}
 
     /** The state of one simulated player. */
     static final class Player {
         final Profile profile;
         final GameConfig cfg;
         final GameCatalog cat;
-        final GameCatalog.MapDef map;
+        GameCatalog.MapDef map;
         final Set<LocalDate> counted = new HashSet<>();
         final Map<String, Double> statXp = new TreeMap<>();
+        final Set<Integer> boughtHere = new TreeSet<>();
         Build build;
-        int wave = 1, spotsBought, purchases, lastPurchaseDay;
+        int wave = 1, spotsBought, purchases, lastPurchaseDay, moves;
         double coins, earned;
         String failedInputs; // inputs of the last failed attempt, null after a win
 
@@ -87,6 +91,26 @@ public final class PacingSimulation {
             this.map = cat.firstMap();
             this.build = Build.empty(map.freeSpots());
             cfg.stats().forEach(s -> statXp.put(s.id(), 0.0));
+        }
+
+        /** Open spots as in GameLedger: those bought here, then the first ones up to free + bought. */
+        Set<Integer> openSpots() {
+            Set<Integer> open = new TreeSet<>(boughtHere);
+            int want = Math.min(map.spots().size(), map.freeSpots() + spotsBought);
+            for (int i = 0; i < map.spots().size() && open.size() < want; i++) {
+                open.add(i);
+            }
+            return open;
+        }
+
+        /** Moves to a newer map: every tower is sold for what it cost, the spot count carries over. */
+        void moveTo(GameCatalog.MapDef next) {
+            coins += build.towers().values().stream().mapToDouble(Build.Tower::paid).sum();
+            map = next;
+            boughtHere.clear();
+            build = new Build(openSpots(), Map.of());
+            failedInputs = null;
+            moves++;
         }
 
         Map<String, Integer> stats() {
@@ -100,17 +124,22 @@ public final class PacingSimulation {
         }
 
         String inputs() {
-            return wave + "|" + build.fingerprint() + "|" + stats();
+            return wave + "|" + map.id() + "|" + build.fingerprint() + "|" + stats();
         }
     }
 
-    /** One possible purchase. */
-    record Option(String label, int price, Build after, boolean spot) {}
+    /** One possible purchase. spot: the spot it opens, or -1. */
+    record Option(String label, int price, Build after, int spot) {
+        boolean isSpot() {
+            return spot >= 0;
+        }
+    }
 
     public static Report run(Profile profile, int days, GameConfig cfg, GameCatalog cat) {
         Player p = new Player(profile, cfg, cat);
         Map<Integer, Integer> waveOnDay = new TreeMap<>();
-        int firstStuck = -1, stall = 0, longestStall = 0;
+        int firstStuck = -1, stall = 0, longestStall = 0, lastNewWave = 0;
+        Map<Integer, String> moves = new TreeMap<>();
         LocalDate start = LocalDate.of(2026, 1, 5);
         int attemptsPerDay = Math.min(cfg.game().maxAttemptsPerDay(),
                 cfg.game().waveIntervalMinutes() > 0 ? 24 * 60 / cfg.game().waveIntervalMinutes() : ATTEMPTS_PER_DAY_FALLBACK);
@@ -126,6 +155,12 @@ public final class PacingSimulation {
                 p.coins += xp * income;
                 p.earned += xp * income;
                 p.statXp.replaceAll((k, v) -> v + base / p.statXp.size());
+            }
+            GameCatalog.MapDef newest = cat.maps().stream().filter(m -> p.wave - 1 >= m.unlockAfterWave())
+                    .reduce((a, b) -> b).orElse(p.map);
+            if (!newest.id().equals(p.map.id()) && newest.spots().size() > p.map.spots().size()) {
+                p.moveTo(newest);
+                moves.put(day, newest.name());
             }
             spend(p, day, days);
             boolean stuck = false;
@@ -145,6 +180,9 @@ public final class PacingSimulation {
             }
             int before = waveOnDay.getOrDefault(day - 1, 0);
             waveOnDay.put(day, p.wave - 1);
+            if (p.wave - 1 > before) {
+                lastNewWave = day;
+            }
             if (p.wave - 1 == before && stuck) {
                 stall++;
                 longestStall = Math.max(longestStall, stall);
@@ -161,7 +199,7 @@ public final class PacingSimulation {
         });
         return new Report(profile, waveOnDay, firstStuck, longestStall, p.lastPurchaseDay, p.purchases, round(p.earned),
                 round(GameMath.incomeMultiplier(p.build, cat, p.stats(), cfg.game())), towers, p.build.openSpots().size(),
-                options(p).size());
+                options(p).size(), p.map.name(), moves, lastNewWave);
     }
 
     // ------------------------------------------------------------------ greedy spending
@@ -180,7 +218,10 @@ public final class PacingSimulation {
             }
             p.coins -= pick.price();
             p.build = pick.after();
-            if (pick.spot()) p.spotsBought++;
+            if (pick.isSpot()) {
+                p.spotsBought++;
+                p.boughtHere.add(pick.spot());
+            }
             p.purchases++;
             p.lastPurchaseDay = day;
         }
@@ -196,7 +237,7 @@ public final class PacingSimulation {
         List<Integer> byCover = spotsByCoverage(map);
         for (int s : byCover) {
             if (!p.build.openSpots().contains(s)) {
-                out.add(new Option("spot " + s, GameMath.spotCost(p.spotsBought, p.cfg.game()), p.build.withOpenSpot(s), true));
+                out.add(new Option("spot " + s, GameMath.spotCost(p.spotsBought, p.cfg.game()), p.build.withOpenSpot(s), s));
                 break;
             }
         }
@@ -207,22 +248,28 @@ public final class PacingSimulation {
             for (GameCatalog.TowerDef d : p.cat.towers().values()) {
                 if (GameMath.meetsRequirement(d, stats)) {
                     out.add(new Option("build " + d.id(), GameMath.price(d.cost(), disc),
-                            p.build.withTower(empty, new Build.Tower(d.id(), 0, 0, 0)), false));
+                            p.build.withTower(empty, new Build.Tower(d.id(), 0, 0, 0)), -1));
                 }
             }
         }
-        // upgrades
-        p.build.towers().forEach((spot, t) -> {
+        // upgrades: towers of the same type, path and tier are the same option, so only the one on the
+        // best spot is listed (this keeps the simulation fast on the big maps)
+        Set<String> seen = new HashSet<>();
+        for (int spot : byCover) {
+            Build.Tower t = p.build.towers().get(spot);
+            if (t == null || !seen.add(t.type() + ":" + t.a() + ":" + t.b())) continue;
             GameCatalog.TowerDef d = p.cat.tower(t.type());
             for (int path = 0; path < d.paths().size(); path++) {
                 if (t.chosenPath() >= 0 && t.chosenPath() != path) continue;
                 int tier = t.tier(path);
                 if (tier >= d.paths().get(path).tiers().size()) continue;
-                int price = GameMath.price(d.paths().get(path).tiers().get(tier).cost(), disc);
+                GameCatalog.Tier next = d.paths().get(path).tiers().get(tier);
+                if (next.requires() != null && GameMath.level(stats, next.requires().stat()) < next.requires().level()) continue;
+                int price = GameMath.price(next.cost(), disc);
                 out.add(new Option("upgrade " + d.id() + " " + d.paths().get(path).name() + " " + (tier + 1), price,
-                        p.build.withTower(spot, t.upgraded(path, price)), false));
+                        p.build.withTower(spot, t.upgraded(path, price)), -1));
             }
-        });
+        }
         return out;
     }
 
@@ -257,7 +304,7 @@ public final class PacingSimulation {
         for (Option o : affordable) {
             if (o.label().startsWith("build income") || o.label().startsWith("upgrade income")) continue;
             double value;
-            if (o.spot()) {
+            if (o.isSpot()) {
                 // a spot alone does not fight: value it as the best tower it would allow next
                 value = 1e-6;
             } else {
@@ -269,9 +316,9 @@ public final class PacingSimulation {
             }
         }
         // no tower option helps (or none fits): open a new spot if there is no empty one
-        if (best == null || best.spot()) {
+        if (best == null || best.isSpot()) {
             boolean hasEmpty = p.build.openSpots().stream().anyMatch(s -> !p.build.towers().containsKey(s));
-            Option spot = affordable.stream().filter(Option::spot).findFirst().orElse(null);
+            Option spot = affordable.stream().filter(Option::isSpot).findFirst().orElse(null);
             return hasEmpty ? null : spot;
         }
         return best;
@@ -311,23 +358,25 @@ public final class PacingSimulation {
 
     // ------------------------------------------------------------------ tower dominance
 
-    /** One line of the dominance table: a tower type and path, at tier 3, alone on the map. */
+    /** One line of the dominance table: a tower type and its full path (every tier), alone on the map. */
     public record Dominance(String tower, String path, int cost, int wavesAlone, int wavesThree) {}
 
     /**
-     * Each tower and path at tier 3: how far one copy (on the best spot) and three copies (on the
-     * three free spots) get with every stat at level 6. Shows whether one choice beats all others.
+     * Each tower and path with every tier bought: how far one copy (on the best spot) and three copies
+     * (on the three best spots of the first map) get with every stat at level 12 (so tier 4 is allowed).
+     * Shows whether one choice beats all others.
      */
     public static List<Dominance> dominance(GameConfig cfg, GameCatalog cat) {
         Map<String, Integer> stats = new LinkedHashMap<>();
-        cfg.stats().forEach(s -> stats.put(s.id(), 6));
+        cfg.stats().forEach(s -> stats.put(s.id(), 12));
         GameCatalog.MapDef map = cat.firstMap();
         List<Integer> spots = spotsByCoverage(map);
         List<Dominance> out = new ArrayList<>();
         for (GameCatalog.TowerDef d : cat.towers().values()) {
             if (!"attack".equals(d.role())) continue;
             for (int path = 0; path < d.paths().size(); path++) {
-                Build.Tower t = new Build.Tower(d.id(), path == 0 ? 3 : 0, path == 1 ? 3 : 0, 0);
+                int tiers = d.paths().get(path).tiers().size();
+                Build.Tower t = new Build.Tower(d.id(), path == 0 ? tiers : 0, path == 1 ? tiers : 0, 0);
                 int cost = d.cost() + d.paths().get(path).tiers().stream().mapToInt(GameCatalog.Tier::cost).sum();
                 Build one = Build.empty(15).withTower(spots.get(0), t);
                 Build three = one.withTower(spots.get(1), t).withTower(spots.get(2), t);
@@ -360,22 +409,27 @@ public final class PacingSimulation {
         long t0 = System.currentTimeMillis();
         List<Report> reports = List.of(Profile.values()).parallelStream().map(p -> run(p, 365, cfg, cat)).toList();
         System.out.println();
-        System.out.println("GameLife pacing simulation: one year on " + cat.firstMap().name());
+        System.out.println("GameLife pacing simulation: one year, " + cat.maps().size() + " maps");
         System.out.println();
-        System.out.println("| Profile | Waves day 30 | Waves day 100 | Waves day 365 | First day stuck | Longest stall | Purchases | Last purchase | Income x | Spots open | Options left |");
-        System.out.println("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
+        System.out.println("| Profile | Waves day 30 | Waves day 100 | Waves day 200 | Waves day 300 | Waves day 365 | Last new wave | Longest stall | Moves | Purchases | Last purchase | Income x | Spots open | Options left |");
+        System.out.println("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
         for (Report r : reports) {
-            System.out.printf("| %s | %d | %d | %d | day %d | %d days | %d | day %d | %.2f | %d | %d |%n",
+            StringBuilder moves = new StringBuilder();
+            r.moves().forEach((d, m) -> moves.append(moves.isEmpty() ? "" : ", ").append(m).append(" day ").append(d));
+            System.out.printf("| %s | %d | %d | %d | %d | %d | day %d | %d days | %s | %d | day %d | %.2f | %d | %d |%n",
                     r.profile().name().toLowerCase(), r.waveOnDay().get(30), r.waveOnDay().get(100),
-                    r.waveOnDay().get(365), r.firstStuckDay(), r.longestStall(), r.purchases(), r.lastPurchaseDay(),
+                    r.waveOnDay().get(200), r.waveOnDay().get(300), r.waveOnDay().get(365), r.lastNewWaveDay(),
+                    r.longestStall(), moves.isEmpty() ? "none" : moves, r.purchases(), r.lastPurchaseDay(),
                     r.incomeMultiplier(), r.openSpots(), r.optionsLeft());
         }
+        Report lazy = reports.get(0), strong = reports.get(2);
+        System.out.printf("%nstrong / lazy at day 365: %.2f%n", strong.waveOnDay().get(365) / (double) Math.max(1, lazy.waveOnDay().get(365)));
         System.out.println();
         for (Report r : reports) {
             System.out.println(r.profile().name().toLowerCase() + " build at day 365: " + r.towers());
         }
         System.out.println();
-        System.out.println("Tower dominance (tier 3, every stat level 6): furthest wave cleared");
+        System.out.println("Tower dominance (full path, every stat level 12, first map): furthest wave cleared");
         System.out.println();
         System.out.println("| Tower | Path | Cost | 1 tower | 3 towers |");
         System.out.println("| --- | --- | --- | --- | --- |");

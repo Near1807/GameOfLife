@@ -4,6 +4,46 @@ Every assumption and default applied while building GameLife. Section numbers re
 brief; "v2" refers to the version 2 upgrade request, which wins where the two disagree. Numbers
 are in `config/gamelife.json`, rules are in the file named next to them.
 
+## Version 4.1: maps as chapters, tier 4, stronger stats (pacing fix)
+
+1. **Maps 2 and 3 are data** (`content/maps/map_02.json`, 22 spots, opens after wave 30;
+   `map_03.json`, 30 spots, opens after wave 60). The unlock wave is the map file's
+   `unlockAfterWave`. Both have longer serpentine paths with spot rows between the lanes.
+2. **The map being played is in the ledger:** a new event `MAP_CHOSEN` (no coins, no XP, key
+   `map-move:{n}`). Without one, the first map is played. The wave number and enemy scaling carry on.
+3. **Moving sells everything first.** Your request says the player "moves their build"; I made
+   that one action with a confirmation: every tower on the current map gets its normal
+   `TOWER_SOLD` (full refund of what was paid), then `MAP_CHOSEN`. The player rebuilds on the new
+   map with the refunded coins. Moving costs nothing and is always 2 taps. Moving back to an earlier
+   unlocked map is allowed (same rule).
+4. **Open spots carry over by number.** On any map, the open spots are the spots bought on that map
+   plus its first spots in file order, until there are `freeSpots + all spots ever bought`. So after
+   buying 8 spots on map 1, map 2 opens with its first 11 spots. You still choose which locked spot
+   to buy, on every map; spot prices continue from the total bought (`150 x 1.3^n`). Map files list
+   their spots in a sensible opening order.
+5. **Ledger keys now include the map:** `spot:{map}:{spot}`, `tower:{map}:{spot}:{n}:...`. Old v4
+   events without a map in their meta belong to the first map, as before.
+6. **Tier 4** is a fourth tier on every path in `content/towers.json`, about 2.5 x tier 3, with a
+   `requires` `{stat, level}`: Archer and Cannon Strength 10, Frost Spirit 10, Mage Intellect 10,
+   Tesla Intellect 12 (it is the strongest tower), Venom Vitality 10, Banner Social 10, Market
+   Commerce Social 10 (it is the income path) and Bargain Creativity 10. Path exclusivity is
+   unchanged. Tier 4 below its level shows in the panel with "Needs Strength 10" and cannot be bought.
+7. **Config retune:** spot growth 1.8 → 1.3 (30 spots on map 3 must stay reachable), and the four
+   combat stat bonuses tripled (damage per Strength or Intellect level 0.03 → 0.09, fire rate per
+   Discipline level 0.015 → 0.045, slow per Spirit level 0.004 → 0.012). Social and Creativity
+   (economy) are unchanged. The Archer fix stays. Results and the sweep are in `docs/PACING.md`.
+8. **The 1.6 target is not met (1.53 at day 365).** It holds through day 200. With exponential
+   enemy HP and a ceiling per map, config alone stays between 1.33 and 1.58 in every setting I
+   tried. `docs/PACING.md` lists a fourth map or slower HP growth at high waves for you to choose.
+9. **Simulation speed.** The bigger maps made waves long (2 to 3 minutes of game time with 30
+   towers). The simulation now compares squared distances instead of `Math.hypot`, and each tower
+   searches only the stretches of path within its range (enemies sorted by distance once per step).
+   Results are the same to the last digit; the golden values changed only because of the new stat
+   bonuses.
+10. **The pacing player** now moves to each newer, bigger map as soon as it opens, buys tier 4 when
+    its stat level allows, and considers only one tower per type, path and tier (they are the same
+    option on different spots).
+
 ## Version 4: the tower-defense game replaces the boss fight
 
 The v4 brief replaces the boss fight with a server-side, deterministic tower-defense game. The v3

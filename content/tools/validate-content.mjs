@@ -106,8 +106,11 @@ function checkGame(root, schemas, errors) {
     }
     if ((t.paths ?? []).length !== 2) errors.push(`${rel}: needs exactly 2 upgrade paths`);
     for (const p of t.paths ?? []) {
-      if ((p.tiers ?? []).length !== 3) errors.push(`${rel}: path ${p.name} needs exactly 3 tiers`);
+      if (![3, 4].includes((p.tiers ?? []).length)) errors.push(`${rel}: path ${p.name} needs 3 or 4 tiers`);
       for (const tier of p.tiers ?? []) {
+        if (tier.requires && (!STAT_IDS.has(tier.requires.stat) || !(tier.requires.level >= 1))) {
+          errors.push(`${rel}: path ${p.name}: a tier's requires needs a stat id and a level >= 1`);
+        }
         for (const [k, op] of Object.entries(tier.set ?? {})) {
           if (!TOWER_STATS.has(k)) errors.push(`${rel}: path ${p.name}: unknown stat "${k}"`);
           const ops = Object.keys(op ?? {});
