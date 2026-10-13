@@ -1,8 +1,80 @@
 # DECISIONS
 
 Every assumption and default applied while building GameLife. Section numbers refer to the build
-brief. Anything here can be changed; numbers are in `config/gamelife.json`, rules are in the
-file named next to them.
+brief; "v2" refers to the version 2 upgrade request, which wins where the two disagree. Numbers
+are in `config/gamelife.json`, rules are in the file named next to them.
+
+## Version 2 (steps 1 and 2 done; stopped for review as asked)
+
+### Design system (v2 section 3)
+- Free default theme "Nebula" in `frontend/src/theme.css`, all as CSS tokens: near-black with soft
+  violet/cyan glows, translucent glass cards with blur, thin glowing borders, cyan + violet accents,
+  gold only for XP and coins, one colour token per stat. A shop theme will override tokens only.
+- Fonts: Inter (text), Space Grotesk (headings, big numbers), JetBrains Mono (only for small
+  numbers such as XP previews). Bundled with `@fontsource-variable/*` so the app works without
+  internet access (no Google Fonts call from the phone).
+- Icons: Lucide (`lucide-react` 1.45.0), one set everywhere. Stat icons: Strength dumbbell,
+  Creativity palette, Intellect brain, Discipline target, Social users, Vitality heart-pulse,
+  Spirit sparkles (`frontend/src/stats.ts`).
+- Removed: terminal headings, ASCII mood faces, blinking cursor, scanlines (and its setting),
+  console log (replaced by a "Recent activity" feed), monospace body text.
+- Layout: bottom floating tab bar on phones, side rail from 900 px wide, two-column grids on
+  laptops. Tabs: Home, Quests, Focus, Habits, Hero; Settings sits behind the gear in the top bar.
+- Motion: animated bar fills (from the previous value), count-up numbers, page fade-in, press
+  scale, check pop, flame flicker, hero lunge on payout, floating "+XP" with its stat split.
+  All of it is turned off by the reduced-effects switch and by the system "reduce motion" setting.
+- Pixel art only as framed artwork (hero portrait), scaled by whole numbers, never smoothed.
+  **The hero sprite is still the v1 placeholder**: new hero and boss art is step 5 of the
+  requested order, so it was not done yet.
+
+### Stat tags (v2 4.1)
+- One component, `StatTagPicker`, used by quests, focus, habits and the check-in: seven coloured
+  icon toggles, 0 to 7 selected, and a live preview of the equal split of the base XP
+  ("No stat tag: earns coins only" when empty). The preview uses the same cent rule as the
+  backend, and a test checks they agree.
+- Duration chips show the final XP they will pay (base x current multipliers).
+- Check-in tags: the API now accepts tags. Default = the tags of the last check-in, else Spirit.
+  On the home screen, "Feeds: SPI" opens the picker; the mood tap stays a single tap.
+- Habit tags are chosen at creation (default Discipline). Editing the tags of an existing habit
+  is not offered yet.
+
+### Character sheet (v2 4.2, brief 8)
+- Level formula exactly as in the brief: L to L+1 needs 100 x 1.15^(L-1), every stat starts at 1,
+  overall level = sum of the seven levels - 6. `rules/LevelCurve.java`.
+- **Brief inconsistency:** the brief says 30 stat XP a day reaches level 10 in about 68 days and
+  level 20 in about 340. With the formula above it is about 56 and 294 days; the brief's numbers
+  correspond to counting from level 0. The formula was kept (it is the rule), and the sanity
+  numbers in the test use the formula's values.
+- Class = the two stats with the most XP (ties: config order), named from
+  `content/character.json` (21 pair names, e.g. Intellect + Discipline = "Code Monk"). With fewer
+  than two stats trained: "Unawakened". Rank from the overall level (Novice 1, Apprentice 8,
+  Adept 20, Expert 40, Master 70, Legend 110).
+- "Balanced": every stat at least level 5 (config `balancedMinLevel`) **and** highest minus
+  lowest at most 5. The brief only states the second condition, but then every new character
+  would be "Balanced" on day one. Balanced replaces the class with "Polymath". Cosmetic only.
+- The radar uses level + progress inside the level, so small gains move the shape. Its scale is
+  the highest level rounded up to a multiple of 5.
+- Gear slots are shown (weapon level and multiplier, armour and charm empty) until the shop
+  exists in step 4.
+
+### Home dashboard (v2 4.3)
+- Hero card (portrait, overall level, class, rank, seven stat bars), today's XP against a daily
+  goal (config `home.dailyXpGoal` = 100, from brief 6), coins against the cost of the next weapon
+  upgrade (150 x 1.35^n, the first real thing to buy), streak with multiplier, freezes, next
+  milestone and the "Rest" button, next best action, mood check-in, quick-add, recent activity.
+- The boss and weekly stage card is step 3, so it is not on the home screen yet.
+- Next best action (`frontend/src/nextAction.ts`): check-in if not done; else a habit scheduled
+  today and not done; else the open quest that trains the lowest stat (shortest first); else a
+  focus block. Its "Done" button is the explicit confirmation of that one item, like ticking it.
+
+### Habits screen
+- Per-habit streak (consecutive scheduled days done; unscheduled days and planned rest days are
+  skipped; today does not break it while open). Display only: the XP multiplier still uses the
+  global streak of brief 7.
+- 28-day heat strip per habit: done (stat colour), missed (thin grey outline, never red), off,
+  today. Global streak, freezes and planned rest days shown at the top.
+
+## Version 1 decisions (still valid unless replaced above)
 
 ## Contradictions and open points to check (please read these first)
 
@@ -27,10 +99,10 @@ file named next to them.
 5. **Tests of section 14 not yet written**, because their feature belongs to a later milestone:
    "a purchase with too low a balance is refused" (milestone 4) and "the content validator
    rejects each violation" (milestone 5).
-6. **Art (11, 12).** No licensed asset pack is integrated yet (milestone 5). The hero, flame and
-   coin are placeholders drawn by `content/tools/make-placeholder-sprites.mjs` that already
-   follow the contract: 32x32 hero, 16x16 icons, palette colors only, no semi-transparency,
-   4-frame idle sheet at 6 fps.
+6. **Art (11, 12).** No licensed asset pack is integrated yet. The hero is still the placeholder
+   drawn by `content/tools/make-placeholder-sprites.mjs` (32x32, palette colours, 4-frame idle);
+   v2 step 5 replaces it. The pixel flame and coin icons are no longer used by the interface
+   (Lucide icons instead) but stay as contract examples.
 
 ## Ledger and data (5)
 
@@ -131,16 +203,10 @@ file named next to them.
 
 ## Interface (3.1, 11)
 
-- The default theme is design tokens (CSS variables) in `frontend/src/theme.css`: near-black
-  background, neon green for actions, cyan for info, gold only for XP and rewards, monospace font,
-  optional CRT scanlines, blinking cursor, console log of events.
-- Every tappable control is at least 44 px tall (52 px for main buttons).
-- Feedback in this milestone: XP number pop with stat names (1.2 s, pointer-events none, never
-  blocks), hero lunge, a short 8-bit sound made with Web Audio (no sound files yet). Orbs, boss
-  damage and celebrations come with milestone 3 and 5.
-- The streak flame grows at 7, 30, 100 and 365 days by whole-number scaling.
-- Reduced effects, sound and scanlines switches are stored per device (browser localStorage),
-  since they are display preferences and not game data.
+- Replaced by the version 2 design system above. Still true: every tappable control is at least
+  44 px, animations last under 1.5 s and never block the next tap, the reduced-effects and sound
+  switches are stored per device (browser localStorage), and the sound is a short chime made with
+  Web Audio (no sound files yet).
 
 ## Backup (3.3, 5)
 

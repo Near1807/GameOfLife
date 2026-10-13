@@ -1,5 +1,6 @@
 package gamelife.state;
 
+import gamelife.checkin.CheckinService;
 import gamelife.config.GameConfig;
 import gamelife.ledger.HashChain;
 import gamelife.ledger.LedgerEvent;
@@ -30,11 +31,13 @@ public class StateController {
     private final LedgerService ledger;
     private final PayoutService payout;
     private final TaskService tasks;
+    private final CheckinService checkin;
     private final GameConfig config;
     private final GameTime time;
 
-    public StateController(LedgerService ledger, PayoutService payout, TaskService tasks, GameConfig config,
-                           GameTime time) {
+    public StateController(LedgerService ledger, PayoutService payout, TaskService tasks, CheckinService checkin,
+                           GameConfig config, GameTime time) {
+        this.checkin = checkin;
         this.ledger = ledger;
         this.payout = payout;
         this.tasks = tasks;
@@ -47,7 +50,8 @@ public class StateController {
 
     public record GameState(LocalDate today, Instant serverNow, BigDecimal balance, BigDecimal xpToday,
                             StreakInfo streak, PayoutService.Multipliers multipliers,
-                            Map<String, BigDecimal> statXp, HashChain.Check chain, List<LedgerEvent> log) {}
+                            Map<String, BigDecimal> statXp, int weaponLevel, double nextUpgradeCost,
+                            HashChain.Check chain, List<LedgerEvent> log) {}
 
     @GetMapping("/state")
     public GameState state() {
@@ -56,20 +60,26 @@ public class StateController {
         StreakState s = payout.streakNow(events);
         double multToday = StreakCalculator.multiplier(s.streakForPayment(), config.streak());
         int next = List.of(7, 30, 100, 365).stream().filter(m -> m > s.streakDays()).findFirst().orElse(0);
+        // Weapon upgrade cost n -> n+1 = baseCost x costGrowth ^ n (brief 9.2). Shown as the next goal.
+        int weaponLevel = LedgerFacts.weaponLevel(events);
+        double nextCost = config.weapon().baseCost() * Math.pow(config.weapon().costGrowth(), weaponLevel);
         StreakInfo streak = new StreakInfo(s.streakDays(), s.freezes(), s.todayCounted(), s.comebackPending(),
                 multToday, next);
         return new GameState(today, time.now(), LedgerFacts.balance(events), LedgerFacts.xpOnDay(events, today),
-                streak, payout.multipliersNow(events), LedgerFacts.statTotals(events), HashChain.verify(events),
+                streak, payout.multipliersNow(events), LedgerFacts.statTotals(events), weaponLevel,
+                Math.round(nextCost * 100.0) / 100.0, HashChain.verify(events),
                 ledger.latest(20));
     }
 
     /** Static data for the UI: chips, stats, defaults. */
     public record Meta(List<GameConfig.Stat> stats, GameConfig.Todo todo, GameConfig.Timer timer,
-                       GameConfig.Checkin checkin, double habitXp, int lastTaskMinutes, int maxRestDaysPerWeek) {}
+                       GameConfig.Checkin checkin, double habitXp, int lastTaskMinutes, int maxRestDaysPerWeek,
+                       double dailyXpGoal, List<String> lastCheckinTags) {}
 
     @GetMapping("/meta")
     public Meta meta() {
         return new Meta(config.stats(), config.todo(), config.timer(), config.checkin(), config.habit().xp(),
-                tasks.lastMinutesUsed(), config.streak().maxRestDaysPerWeek());
+                tasks.lastMinutesUsed(), config.streak().maxRestDaysPerWeek(), config.home().dailyXpGoal(),
+                checkin.lastTags());
     }
 }

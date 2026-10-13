@@ -3,9 +3,11 @@
 A single-user toolbox where real daily actions (tasks, focus blocks, habits, a mood check-in)
 feed one append-only XP ledger, styled as a pixel-art game in a black terminal look.
 
-**Status: milestones 1 and 2 of 5** (foundation and daily tools). The character sheet, the weekly
-boss, the shop and the final art come in the next milestones. See `DECISIONS.md` for every
-assumption made, and `docs/DEMO.md` for what to try.
+**Status: version 2, steps 1 and 2 of 5** (see the upgrade request): a new modern sci-fi design
+system on every screen, stat tags on every action, the character sheet and stats on the home
+screen. Next: weekly boss and review (step 3), shop and achievements (step 4), juice and new hero
+art (step 5). See `DECISIONS.md` for every assumption made, `docs/DEMO.md` for what to try and
+`docs/screenshots/v2/` for how it looks.
 
 ## Requirements
 
@@ -55,7 +57,7 @@ Open <http://localhost:5173> (or `http://<laptop-ip>:5173` on the phone).
 ## Test
 
 ```bash
-npm test               # backend (JUnit, 54 tests) then frontend (Vitest, 9 tests)
+npm test               # backend (JUnit, 65 tests) then frontend (Vitest, 14 tests)
 ```
 
 Or separately: `npm run test:backend`, `npm run test:frontend`. The backend tests use their own
@@ -83,19 +85,24 @@ backend/    Spring Boot (Java 21), SQLite through JdbcTemplate, no ORM
   src/main/java/gamelife/
     ledger/   append-only ledger, unique keys, hash chain       (brief 5)
     payout/   the ONLY place that pays XP, applies multipliers  (brief 6)
-    rules/    pure rules: streak, freezes, comeback, stat split (brief 7, 8)
+    rules/    pure rules: streak, freezes, comeback, stat split, levels (brief 7, 8)
+    character/ character sheet: levels, class, rank             (brief 8)
     tasks/ timer/ habits/ checkin/ rest/   the daily tools      (brief 6, 7)
     backup/   export / import                                   (brief 3.3)
     state/    read-only summaries for the home screen
   src/main/resources/schema.sql   all tables
 frontend/   React + TypeScript + Vite
   src/api.ts        every call to the backend
-  src/screens/      home, tasks, focus, habits, settings
-  src/components/   hero, flame, chips, XP pops, console log, timer question
-  src/theme.css     the free "Terminal" theme as design tokens
-  src/test/         friction (tap counting) tests
+  src/screens/      home, quests, focus, habits, hero (character sheet), settings
+  src/ui/           design-system components: card, stat tag picker, bars, count-up,
+                    ring, radar chart, hero portrait, mood picker, XP pops, timer question
+  src/stats.ts      icon and colour of each stat, split preview
+  src/nextAction.ts the "next best action" rule of the home screen
+  src/theme.css     the free "Nebula" theme as design tokens
+  src/test/         friction (tap counting), tag picker and logic tests
 config/gamelife.json       every number and formula parameter
 content/palette.json       the 32-color palette (brief 12)
+content/character.json     class names (two highest stats) and rank names
 content/sprites/           placeholder pixel art (served at the site root)
 content/tools/             make-placeholder-sprites.mjs (npm run sprites)
 scripts/backup.mjs         command-line backup

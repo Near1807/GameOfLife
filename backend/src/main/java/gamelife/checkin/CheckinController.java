@@ -4,6 +4,7 @@ import gamelife.payout.ActionResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -15,7 +16,7 @@ public class CheckinController {
         this.service = service;
     }
 
-    public record CheckinInput(int mood) {}
+    public record CheckinInput(int mood, List<String> tags) {}
 
     @GetMapping("/today")
     public Map<String, Object> today() {
@@ -26,6 +27,6 @@ public class CheckinController {
 
     @PostMapping
     public ActionResult checkin(@RequestBody CheckinInput in) {
-        return service.checkin(in.mood());
+        return service.checkin(in.mood(), in.tags());
     }
 }

@@ -39,6 +39,8 @@ export interface GameState {
   streak: StreakInfo;
   multipliers: { streak: number; weapon: number; ascension: number; comeback: number };
   statXp: Record<string, number>;
+  weaponLevel: number;
+  nextUpgradeCost: number;
   chain: { valid: boolean; brokenAtId: number; message: string };
   log: LedgerEvent[];
 }
@@ -65,6 +67,28 @@ export interface Meta {
   habitXp: number;
   lastTaskMinutes: number;
   maxRestDaysPerWeek: number;
+  dailyXpGoal: number;
+  lastCheckinTags: string[];
+}
+
+export interface StatView {
+  id: string;
+  name: string;
+  hint: string;
+  xp: number;
+  level: number;
+  xpIntoLevel: number;
+  xpForNext: number;
+  progress: number;
+}
+
+export interface Character {
+  stats: StatView[];
+  overallLevel: number;
+  className: string;
+  rank: string;
+  balanced: boolean;
+  topStats: string[];
 }
 
 export interface TaskView {
@@ -109,6 +133,8 @@ export interface HabitView {
   tags: string[];
   scheduledToday: boolean;
   doneToday: boolean;
+  streak: number;
+  history: { date: string; status: 'DONE' | 'MISSED' | 'OFF' | 'TODAY' }[];
 }
 
 /** Sends one request. Throws an Error with the server's message when refused. */
@@ -128,6 +154,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 export const api = {
   state: () => request<GameState>('GET', '/api/state'),
   meta: () => request<Meta>('GET', '/api/meta'),
+  character: () => request<Character>('GET', '/api/character'),
 
   tasks: () => request<TaskView[]>('GET', '/api/tasks'),
   suggestions: (q = '') => request<Suggestion[]>('GET', `/api/tasks/suggestions?q=${encodeURIComponent(q)}`),
@@ -150,7 +177,7 @@ export const api = {
   archiveHabit: (id: number) => request<void>('POST', `/api/habits/${id}/archive`),
 
   checkinToday: () => request<{ mood: number | null }>('GET', '/api/checkin/today'),
-  checkin: (mood: number) => request<ActionResult>('POST', '/api/checkin', { mood }),
+  checkin: (mood: number, tags?: string[]) => request<ActionResult>('POST', '/api/checkin', { mood, tags }),
 
   restDays: () => request<string[]>('GET', '/api/rest-days'),
   planRest: (date: string) => request<ActionResult>('POST', '/api/rest-days', { date }),
