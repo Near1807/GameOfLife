@@ -66,8 +66,9 @@ test('the shell opens the app on a local port, stays single, and stops the serve
 
   // a second start does not open a second app: it focuses the first and exits
   await app.evaluate(({ app: a }) => { globalThis.secondStarts = 0; a.on('second-instance', () => { globalThis.secondStarts++; }); });
-  // its output is kept so a failure on CI says why
-  const second = spawn(app.process().spawnfile, [...extra, appDir], { env: appEnv({ GAMELIFE_DATA_DIR: dataDir }), stdio: ['ignore', 'pipe', 'pipe'] });
+  // Electron itself, not app.process().spawnfile: on Windows that is the cmd.exe Playwright launched it
+  // through, which started an empty shell instead of a second app. Its output is kept so a failure says why.
+  const second = spawn(electronPath, [...extra, appDir], { env: appEnv({ GAMELIFE_DATA_DIR: dataDir }), stdio: ['ignore', 'pipe', 'pipe'] });
   let secondOutput = '';
   second.stdout.on('data', (d) => { secondOutput += d; });
   second.stderr.on('data', (d) => { secondOutput += d; });
