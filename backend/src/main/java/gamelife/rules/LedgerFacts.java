@@ -75,21 +75,46 @@ public final class LedgerFacts {
         return days;
     }
 
-    /** Number of ASCEND events (milestone 4; 0 until then). */
+    /** Paused days (illness, travel): the key is pause:{date}. */
+    public static Set<LocalDate> pausedDays(List<LedgerEvent> events) {
+        Set<LocalDate> days = new HashSet<>();
+        for (LedgerEvent e : events) {
+            if (e.type() == EventType.PAUSE) {
+                days.add(LocalDate.parse(e.key().substring("pause:".length())));
+            }
+        }
+        return days;
+    }
+
+    /** Rest days and paused days: both keep the streak without increasing it. */
+    public static Set<LocalDate> restOrPausedDays(List<LedgerEvent> events) {
+        Set<LocalDate> days = restDays(events);
+        days.addAll(pausedDays(events));
+        return days;
+    }
+
+    /** Number of ASCEND events. */
     public static int ascensions(List<LedgerEvent> events) {
         return (int) events.stream().filter(e -> e.type() == EventType.ASCEND).count();
     }
 
-    /** Weapon level = UPGRADE events since the last ASCEND (brief 9.1: ascension resets it). */
+    /** Weapon level = weapon UPGRADE events since the last ASCEND (brief 9.1: ascension resets it). */
     public static int weaponLevel(List<LedgerEvent> events) {
         int level = 0;
         for (LedgerEvent e : events) {
-            if (e.type() == EventType.UPGRADE) {
+            if (e.type() == EventType.UPGRADE && "weapon".equals(Json.toMap(e.meta()).get("slot"))) {
                 level++;
             } else if (e.type() == EventType.ASCEND) {
                 level = 0;
             }
         }
         return level;
+    }
+
+    /** Armour level = all armour UPGRADE events (kept on ascension). */
+    public static int armorLevel(List<LedgerEvent> events) {
+        return (int) events.stream()
+                .filter(e -> e.type() == EventType.UPGRADE && "armor".equals(Json.toMap(e.meta()).get("slot")))
+                .count();
     }
 }

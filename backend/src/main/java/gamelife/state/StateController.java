@@ -2,7 +2,7 @@ package gamelife.state;
 
 import gamelife.checkin.CheckinService;
 import gamelife.config.GameConfig;
-import gamelife.stage.StageService;
+import gamelife.fight.FightService;
 import gamelife.ledger.HashChain;
 import gamelife.ledger.LedgerEvent;
 import gamelife.ledger.LedgerService;
@@ -33,14 +33,14 @@ public class StateController {
     private final PayoutService payout;
     private final TaskService tasks;
     private final CheckinService checkin;
-    private final StageService stages;
+    private final FightService fight;
     private final GameConfig config;
     private final GameTime time;
 
     public StateController(LedgerService ledger, PayoutService payout, TaskService tasks, CheckinService checkin,
-                           StageService stages, GameConfig config, GameTime time) {
+                           FightService fight, GameConfig config, GameTime time) {
         this.checkin = checkin;
-        this.stages = stages;
+        this.fight = fight;
         this.ledger = ledger;
         this.payout = payout;
         this.tasks = tasks;
@@ -54,11 +54,12 @@ public class StateController {
     public record GameState(LocalDate today, Instant serverNow, BigDecimal balance, BigDecimal xpToday,
                             StreakInfo streak, PayoutService.Multipliers multipliers,
                             Map<String, BigDecimal> statXp, int weaponLevel, double nextUpgradeCost,
-                            StageService.StageView stage,
+                            FightService.FightView fight,
                             HashChain.Check chain, List<LedgerEvent> log) {}
 
     @GetMapping("/state")
     public GameState state() {
+        FightService.FightView fightView = fight.view(); // first: brings the boss attacks up to date
         List<LedgerEvent> events = ledger.all();
         LocalDate today = time.today();
         StreakState s = payout.streakNow(events);
@@ -71,7 +72,7 @@ public class StateController {
                 multToday, next);
         return new GameState(today, time.now(), LedgerFacts.balance(events), LedgerFacts.xpOnDay(events, today),
                 streak, payout.multipliersNow(events), LedgerFacts.statTotals(events), weaponLevel,
-                Math.round(nextCost * 100.0) / 100.0, stages.view(events), HashChain.verify(events),
+                Math.round(nextCost * 100.0) / 100.0, fightView, HashChain.verify(events),
                 ledger.latest(20));
     }
 

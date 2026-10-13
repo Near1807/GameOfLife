@@ -1,0 +1,11 @@
+{
+  "contractVersion": 1,
+  "id": "skin_ember_night",
+  "name": "Ember Night",
+  "kind": "skin",
+  "price": 800,
+  "tokens": {
+    "filter": "hue-rotate(-40deg) saturate(1.4) brightness(0.9)"
+  },
+  "description": "The arena in embers. Looks only."
+}

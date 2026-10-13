@@ -1,0 +1,10 @@
+{
+  "contractVersion": 1,
+  "id": "charm_aegis_rune",
+  "name": "Aegis Rune",
+  "kind": "charm",
+  "price": 400,
+  "effect": "shieldBonus",
+  "value": 0.05,
+  "description": "A small shield, every day."
+}

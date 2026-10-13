@@ -69,24 +69,50 @@
     "comebackMultiplier": 2
   },
 
+  "fight": {
+    "_comment": "The losable boss fight (brief 9.1). Boss k: HP = bossBaseHp x bossHpGrowth^(k-1), ATK per day = bossBaseAtk + bossAtkPerBoss x (k-1). After each ascension bosses are stronger: x (1 + ascensionBossScale x ascensions). Hero max HP = heroBaseHp + heroHpPerVitalityLevel x Vitality level + armour. Shield of a day = min(1, that day's XP / home.dailyXpGoal). A fully shielded day heals fullShieldHeal. defeatMode: mild | medium | hard.",
+    "bossBaseHp": 800,
+    "bossHpGrowth": 1.3,
+    "bossBaseAtk": 20,
+    "bossAtkPerBoss": 4,
+    "ascensionBossScale": 0.1,
+    "heroBaseHp": 100,
+    "heroHpPerVitalityLevel": 10,
+    "fullShieldHeal": 10,
+    "killRewardCoins": 100,
+    "defeatMode": "mild",
+    "hardModeCoinLoss": 0.2,
+    "pauseMaxDays": 7,
+    "pauseWindowDays": 30,
+    "heroEveryNLevels": 10,
+    "regionEveryNBosses": 3
+  },
+
   "weapon": {
-    "_comment": "Used from milestone 4. multiplier = bonusPerLevel ^ level, cost(n -> n+1) = baseCost x costGrowth ^ n.",
+    "_comment": "Damage multiplier = bonusPerLevel ^ level. Cost of level n -> n+1 = baseCost x costGrowth ^ n. Resets to 0 on ascension.",
     "bonusPerLevel": 1.10,
     "baseCost": 150,
     "costGrowth": 1.35
   },
 
+  "armor": {
+    "_comment": "Each level: +hpPerLevel max HP and +reductionPerLevel damage reduction (capped at maxReduction). Cost of level n -> n+1 = baseCost x costGrowth ^ n. Kept on ascension.",
+    "hpPerLevel": 20,
+    "reductionPerLevel": 0.05,
+    "maxReduction": 0.6,
+    "baseCost": 120,
+    "costGrowth": 1.35
+  },
+
   "ascension": {
-    "_comment": "multiplier = perAscension ^ number of ASCEND events (New Game+ after stage 10).",
+    "_comment": "XP multiplier = perAscension ^ number of ASCEND events (New Game+ after the last boss file is beaten).",
     "perAscension": 1.05
   },
 
-  "stages": {
-    "_comment": "Weekly boss (brief 9.1). Boss HP of stage k = baseTarget x growth ^ (k - 1). A week = Monday 04:00 to Monday 04:00. clearRewardCoins: coins paid once when a boss dies (no XP, no stat XP).",
-    "count": 10,
-    "baseTarget": 800,
-    "growth": 1.3,
-    "clearRewardCoins": 100
+  "shop": {
+    "_comment": "Charms equipped at once, and how many past days the shop uses to predict days-to-beat.",
+    "maxCharms": 2,
+    "forecastDays": 14
   },
 
   "statLevels": {
@@ -96,7 +122,7 @@
   },
 
   "loot": {
-    "_comment": "Used from milestone 4/5. Cosmetic only.",
+    "_comment": "Chance that a validation also drops a cosmetic item you do not own yet. Cosmetic only, never coins or XP.",
     "dropRate": 0.05
   }
 }

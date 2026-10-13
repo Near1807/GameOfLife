@@ -1,0 +1,10 @@
+{
+  "contractVersion": 1,
+  "id": "charm_moon_amulet",
+  "name": "Moon Amulet",
+  "kind": "charm",
+  "price": 400,
+  "effect": "shieldHeal",
+  "value": 10,
+  "description": "Heals you on every fully shielded day."
+}

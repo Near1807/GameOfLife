@@ -1,0 +1,10 @@
+{
+  "contractVersion": 1,
+  "id": "charm_ice_crystal",
+  "name": "Ice Crystal",
+  "kind": "charm",
+  "price": 300,
+  "effect": "freezeCapacity",
+  "value": 1,
+  "description": "Holds one more streak freeze."
+}
