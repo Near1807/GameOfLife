@@ -69,7 +69,13 @@ test('the shell opens the app on a local port, stays single, and stops the serve
   const second = spawn(app.process().spawnfile, [...extra, appDir], { env: appEnv({ GAMELIFE_DATA_DIR: dataDir }), stdio: 'ignore' });
   const code = await new Promise((r) => second.on('exit', r));
   assert.strictEqual(code, 0);
-  assert.strictEqual(await app.evaluate(() => globalThis.secondStarts), 1);
+  // the first app hears about it a moment later (on Windows often after the second has exited)
+  let starts = 0;
+  for (let i = 0; i < 50 && starts === 0; i++) {
+    starts = await app.evaluate(() => globalThis.secondStarts);
+    if (starts === 0) await new Promise((r) => setTimeout(r, 200));
+  }
+  assert.strictEqual(starts, 1);
 
   // quit: the server stops cleanly and writes its exit backup
   const closed = new Promise((r) => app.process().on('exit', r));
