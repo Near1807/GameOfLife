@@ -11,10 +11,13 @@ import { fileURLToPath } from 'node:url';
 import { decodePng } from './png.mjs';
 
 const ORDERED = [
-  { folder: 'enemies', prefix: 'boss', w: 64, h: 64, strip: true, schema: 'boss' },
   { folder: 'hero', prefix: 'hero', w: 32, h: 32, strip: true, schema: 'hero' },
-  { folder: 'regions', prefix: 'region', w: 320, h: 180, strip: false, schema: 'region' },
 ];
+
+/** The tower numbers a tier may change (backend TowerStats). */
+const TOWER_STATS = new Set(['dmg', 'rate', 'range', 'rad', 'slow', 'slowT', 'burn', 'pierce', 'multi', 'chain', 'pois',
+  'pslow', 'rbuff', 'dbuff', 'coin', 'disc', 'phys', 'air', 'spread']);
+const STAT_IDS = new Set(['STRENGTH', 'CREATIVITY', 'INTELLECT', 'DISCIPLINE', 'SOCIAL', 'VITALITY', 'SPIRIT']);
 
 /** @returns {{ errors: string[], checked: number }} */
 export function validateContent(root) {
@@ -22,7 +25,7 @@ export function validateContent(root) {
   let checked = 0;
   const palette = loadPalette(root, errors);
   const schemas = {};
-  for (const k of ['item', 'theme', 'boss', 'hero', 'region', 'achievement']) {
+  for (const k of ['item', 'theme', 'hero', 'achievement', 'tower', 'waves', 'enemy', 'map']) {
     const f = path.join(root, 'schemas', `${k}.schema.json`);
     if (fs.existsSync(f)) schemas[k] = JSON.parse(fs.readFileSync(f, 'utf8'));
     else errors.push(`schemas/${k}.schema.json: missing schema`);
@@ -85,7 +88,57 @@ export function validateContent(root) {
     const seen = new Map();
     for (const a of data?.achievements ?? []) addId(seen, a.id, 'achievements.json', errors);
   }
+  checkGame(root, schemas, errors);
   return { errors, checked };
+}
+
+// ---------------------------------------------------------- tower defense data (v4)
+
+function checkGame(root, schemas, errors) {
+  const towers = checkJson(path.join(root, 'towers.json'), 'towers.json', schemas.tower, errors);
+  const ids = new Map();
+  for (const t of towers?.towers ?? []) {
+    const rel = `towers.json (${t.id})`;
+    addId(ids, t.id, 'towers.json', errors);
+    for (const k of Object.keys(t.base ?? {})) if (!TOWER_STATS.has(k)) errors.push(`${rel}: unknown base stat "${k}"`);
+    if (t.requires && (!STAT_IDS.has(t.requires.stat) || !(t.requires.level >= 1))) {
+      errors.push(`${rel}: requires needs a stat id (${[...STAT_IDS].join(', ')}) and a level >= 1`);
+    }
+    if ((t.paths ?? []).length !== 2) errors.push(`${rel}: needs exactly 2 upgrade paths`);
+    for (const p of t.paths ?? []) {
+      if ((p.tiers ?? []).length !== 3) errors.push(`${rel}: path ${p.name} needs exactly 3 tiers`);
+      for (const tier of p.tiers ?? []) {
+        for (const [k, op] of Object.entries(tier.set ?? {})) {
+          if (!TOWER_STATS.has(k)) errors.push(`${rel}: path ${p.name}: unknown stat "${k}"`);
+          const ops = Object.keys(op ?? {});
+          if (ops.length !== 1 || !['mul', 'add', 'set'].includes(ops[0])) {
+            errors.push(`${rel}: path ${p.name}: "${k}" needs exactly one of mul, add, set`);
+          }
+        }
+      }
+    }
+  }
+  const waves = checkJson(path.join(root, 'waves.json'), 'waves.json', schemas.waves, errors);
+  for (const [id, e] of Object.entries(waves?.enemies ?? {})) {
+    for (const problem of checkSchema(e, schemas.enemy ?? {}, id)) errors.push(`waves.json: schema error: ${problem}`);
+  }
+  for (const g of waves?.groups ?? []) {
+    if (waves?.enemies && !(g.type in waves.enemies)) errors.push(`waves.json: group of unknown enemy "${g.type}"`);
+  }
+  const mapsDir = path.join(root, 'maps');
+  const maps = list(mapsDir);
+  if (maps.length === 0) errors.push('maps/: no map_NN.json found');
+  for (const fn of maps) {
+    const rel = `maps/${fn}`;
+    if (!/^map_\d+\.json$/.test(fn)) { errors.push(`${rel}: bad name, expected map_NN.json`); continue; }
+    const m = checkJson(path.join(mapsDir, fn), rel, schemas.map, errors);
+    if (!m) continue;
+    if ((m.path ?? []).length < 2) errors.push(`${rel}: the path needs at least 2 points`);
+    if (m.freeSpots > (m.spots ?? []).length) errors.push(`${rel}: more free spots than spots`);
+    (m.spots ?? []).forEach(([x, y], i) => {
+      if (!(x >= 0 && x <= m.width && y >= 0 && y <= m.height)) errors.push(`${rel}: spot ${i} is outside the map`);
+    });
+  }
 }
 
 // ---------------------------------------------------------- pictures

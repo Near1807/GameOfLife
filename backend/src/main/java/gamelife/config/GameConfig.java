@@ -26,13 +26,9 @@ public record GameConfig(
         Habit habit,
         Checkin checkin,
         Streak streak,
-        Fight fight,
-        Weapon weapon,
-        Armor armor,
-        Ascension ascension,
-        Shop shop,
         StatLevels statLevels,
-        Loot loot) {
+        Loot loot,
+        Game game) {
 
     public record Time(String zone, int dayStartHour) {
         public ZoneId zoneId() {
@@ -46,7 +42,8 @@ public record GameConfig(
 
     public record Home(double dailyXpGoal) {}
 
-    public record Character(int balancedMinLevel, int balancedMaxGap) {}
+    /** heroEveryNLevels: the hero picture changes every N overall levels. */
+    public record Character(int balancedMinLevel, int balancedMaxGap, int heroEveryNLevels) {}
 
     public record Timer(double xpPerMinute, List<Integer> minuteChips, int minMinutes, int maxMinutes,
                         int defaultMinutes, int earlyStopMinMinutes, List<String> defaultTags) {}
@@ -59,23 +56,18 @@ public record GameConfig(
                          int maxRestDaysPerWeek, int restDayMaxDaysAhead, int comebackGapDays,
                          double comebackMultiplier) {}
 
-    public record Weapon(double bonusPerLevel, double baseCost, double costGrowth) {}
-
-    public record Ascension(double perAscension) {}
-
-    public record Fight(double bossBaseHp, double bossHpGrowth, double bossBaseAtk, double bossAtkPerBoss,
-                        double ascensionBossScale, double heroBaseHp, double heroHpPerVitalityLevel,
-                        double fullShieldHeal, double killRewardCoins, String defeatMode, double hardModeCoinLoss,
-                        int pauseMaxDays, int pauseWindowDays, int heroEveryNLevels, int regionEveryNBosses) {}
-
-    public record Armor(double hpPerLevel, double reductionPerLevel, double maxReduction, double baseCost,
-                        double costGrowth) {}
-
-    public record Shop(int maxCharms, int forecastDays) {}
-
     public record StatLevels(double base, double growth) {}
 
     public record Loot(double dropRate) {}
+
+    /** The tower-defense game (v4 brief 2-3). See the _comment of "game" in the config file. */
+    public record Game(int waveIntervalMinutes, int maxAttemptsPerDay, double enemyBaseHp, double enemyHpGrowth,
+                       double enemySpeed, int baseLives, int livesPerVitalityLevels, double spotBaseCost,
+                       double spotCostGrowth, double strengthDamagePerLevel, double intellectDamagePerLevel,
+                       double disciplineRatePerLevel, double spiritSlowPerLevel, double maxSlow,
+                       double socialIncomePerLevel, double creativityDiscountPerLevel, double maxCreativityDiscount,
+                       double maxMarketDiscount, double maxDiscount, double chainRange, double chainDamage,
+                       double poisonSpreadRange, double maxWaveSeconds, int replayFps) {}
 
     /** True when the given id is one of the configured stats. */
     public boolean isStat(String id) {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  Activity, CalendarCheck, Check, ChevronRight, Coins, Flame, Gift, Moon, Play, Skull, Smile, Snowflake, Sparkles, Sword, Timer, Undo2, Zap,
+  Activity, CalendarCheck, Castle, Check, ChevronRight, Coins, Flame, Gift, Moon, Play, Smile, Snowflake, Sparkles, Timer, Undo2, Zap,
 } from 'lucide-react';
 import { api, type Character, type GameState, type HabitView, type LedgerEvent, type Meta, type TaskView } from '../api';
 import { nextAction } from '../nextAction';
@@ -8,6 +8,7 @@ import { statStyle } from '../stats';
 import type { Act, Screen } from '../types';
 import { Bar } from '../ui/Bar';
 import { Card } from '../ui/Card';
+import { DefenseCard } from '../ui/DefenseCard';
 import { CountUp } from '../ui/CountUp';
 import { HeroPortrait } from '../ui/HeroPortrait';
 import { MoodPicker } from '../ui/MoodPicker';
@@ -25,12 +26,11 @@ export function HomeScreen(props: {
   refresh: () => void;
   onError: (m: string) => void;
   go: (s: Screen) => void;
-  arena: React.ReactNode;
 }) {
   const { state, meta } = props;
   const s = state.streak;
   const m = state.multipliers;
-  const mult = m.streak * m.weapon * m.ascension * m.comeback;
+  const mult = m.streak * m.comeback;
 
   const [mood, setMood] = useState<number | null>(null);
   const [habits, setHabits] = useState<HabitView[]>([]);
@@ -52,7 +52,7 @@ export function HomeScreen(props: {
 
   return (
     <div className="page">
-    {props.arena}
+    <DefenseCard act={props.act} version={props.version} filter={state.look.mapFilter} />
     <div className="grid home">
       {/* hero */}
       <Card glow>
@@ -115,10 +115,7 @@ export function HomeScreen(props: {
               <div className="row" style={{ alignItems: 'baseline', gap: 6, margin: '6px 0 10px' }}>
                 <CountUp value={state.balance} className="big-num gold" />
               </div>
-              <Bar value={state.balance / state.nextUpgradeCost} color="var(--violet-soft)" thick label="toward next weapon upgrade" />
-              <button className="tiny faint" style={{ all: 'unset', cursor: 'pointer', marginTop: 6, display: 'block', fontSize: 11.5 }} onClick={() => props.go('shop')}>
-                <Sword size={11} /> Weapon Lv {state.weaponLevel + 1} at {Math.round(state.nextUpgradeCost)} · open shop
-              </button>
+              <div className="tiny faint">Spend them on the map: tap a spot.</div>
             </div>
           </div>
         </Card>
@@ -223,7 +220,7 @@ export function HomeScreen(props: {
   );
 }
 
-const MODULE_ICON = { todo: Check, timer: Timer, habit: CalendarCheck, checkin: Smile, rest: Moon, fight: Skull, shop: Coins, loot: Gift } as const;
+const MODULE_ICON = { todo: Check, timer: Timer, habit: CalendarCheck, checkin: Smile, rest: Moon, game: Castle, shop: Coins, loot: Gift } as const;
 
 function FeedItem(props: { e: LedgerEvent }) {
   const e = props.e;
@@ -236,7 +233,6 @@ function FeedItem(props: { e: LedgerEvent }) {
       </span>
       <div className="grow">
         <div style={{ fontWeight: 550 }}>{e.type === 'REST_DAY' ? 'Rest day planned' : e.label}</div>
-        {e.type === 'BOSS_ATTACK' && <div className="tiny muted">hit for {Math.round(Number(e.meta.damage))}, blocked {Math.round(Number(e.meta.blocked))}</div>}
         <div className="meta-row tiny faint">
           {new Date(e.occurredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           {tags.map((t) => {

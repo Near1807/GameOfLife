@@ -1,62 +1,101 @@
 {
   "_comment": "GameLife tuning file. Every number and formula parameter lives here (brief section 4). Restart the backend after editing. Fields starting with _ are comments.",
-
   "time": {
     "zone": "Europe/Brussels",
     "dayStartHour": 4
   },
-
   "stats": [
-    { "id": "STRENGTH",   "name": "Strength",   "hint": "sport" },
-    { "id": "CREATIVITY", "name": "Creativity", "hint": "music, creative projects" },
-    { "id": "INTELLECT",  "name": "Intellect",  "hint": "study, coding" },
-    { "id": "DISCIPLINE", "name": "Discipline", "hint": "focus timer, habits" },
-    { "id": "SOCIAL",     "name": "Social",     "hint": "scouts, friends" },
-    { "id": "VITALITY",   "name": "Vitality",   "hint": "sleep, food" },
-    { "id": "SPIRIT",     "name": "Spirit",     "hint": "mood check-in, rest" }
+    {
+      "id": "STRENGTH",
+      "name": "Strength",
+      "hint": "sport"
+    },
+    {
+      "id": "CREATIVITY",
+      "name": "Creativity",
+      "hint": "music, creative projects"
+    },
+    {
+      "id": "INTELLECT",
+      "name": "Intellect",
+      "hint": "study, coding"
+    },
+    {
+      "id": "DISCIPLINE",
+      "name": "Discipline",
+      "hint": "focus timer, habits"
+    },
+    {
+      "id": "SOCIAL",
+      "name": "Social",
+      "hint": "scouts, friends"
+    },
+    {
+      "id": "VITALITY",
+      "name": "Vitality",
+      "hint": "sleep, food"
+    },
+    {
+      "id": "SPIRIT",
+      "name": "Spirit",
+      "hint": "mood check-in, rest"
+    }
   ],
-
   "todo": {
     "_comment": "Base XP = xpPerMinute x expected minutes. No upper limit on minutes (brief 6).",
     "xpPerMinute": 1,
-    "minuteChips": [5, 10, 15, 30, 60, 120],
+    "minuteChips": [
+      5,
+      10,
+      15,
+      30,
+      60,
+      120
+    ],
     "defaultMinutes": 15,
     "suggestionCount": 8
   },
-
   "timer": {
     "_comment": "Base XP = xpPerMinute x counted minutes. Counted minutes never exceed planned length.",
     "xpPerMinute": 1,
-    "minuteChips": [10, 25, 45, 60, 90],
+    "minuteChips": [
+      10,
+      25,
+      45,
+      60,
+      90
+    ],
     "minMinutes": 10,
     "maxMinutes": 90,
     "defaultMinutes": 25,
     "earlyStopMinMinutes": 10,
-    "defaultTags": ["DISCIPLINE"]
+    "defaultTags": [
+      "DISCIPLINE"
+    ]
   },
-
   "home": {
     "_comment": "Daily XP goal drawn as the 'today' bar on the home screen (brief 6: about 100 XP on a normal day).",
     "dailyXpGoal": 100
   },
-
   "character": {
-    "_comment": "Balanced title (brief 8): every stat at least balancedMinLevel and highest minus lowest at most balancedMaxGap. Rank names live in content/character.json.",
+    "_comment": "Balanced title (brief 8): every stat at least balancedMinLevel and highest minus lowest at most balancedMaxGap. The hero picture (content/hero/hero_NN.png) changes every heroEveryNLevels overall levels. Rank names live in content/character.json.",
     "balancedMinLevel": 5,
-    "balancedMaxGap": 5
+    "balancedMaxGap": 5,
+    "heroEveryNLevels": 10
   },
-
   "habit": {
     "xp": 20,
-    "defaultTags": ["DISCIPLINE"]
+    "defaultTags": [
+      "DISCIPLINE"
+    ]
   },
-
   "checkin": {
     "xp": 5,
     "moodLevels": 5,
-    "defaultTags": ["SPIRIT"]
+    "defaultTags": [
+      "SPIRIT"
+    ]
   },
-
   "streak": {
     "_comment": "multiplier = 1 + factor x streakDays ^ exponent (no cap).",
     "factor": 0.1,
@@ -68,61 +107,40 @@
     "comebackGapDays": 3,
     "comebackMultiplier": 2
   },
-
-  "fight": {
-    "_comment": "The losable boss fight (brief 9.1). bossHpGrowth tuned from 1.3 to 1.12 by the pacing simulation (DECISIONS.md). Boss k: HP = bossBaseHp x bossHpGrowth^(k-1), ATK per day = bossBaseAtk + bossAtkPerBoss x (k-1). After each ascension bosses are stronger: x (1 + ascensionBossScale x ascensions). Hero max HP = heroBaseHp + heroHpPerVitalityLevel x Vitality level + armour. Shield of a day = min(1, that day's XP / home.dailyXpGoal). A fully shielded day heals fullShieldHeal. defeatMode: mild | medium | hard.",
-    "bossBaseHp": 800,
-    "bossHpGrowth": 1.12,
-    "bossBaseAtk": 20,
-    "bossAtkPerBoss": 4,
-    "ascensionBossScale": 0.1,
-    "heroBaseHp": 100,
-    "heroHpPerVitalityLevel": 10,
-    "fullShieldHeal": 10,
-    "killRewardCoins": 100,
-    "defeatMode": "mild",
-    "hardModeCoinLoss": 0.2,
-    "pauseMaxDays": 7,
-    "pauseWindowDays": 30,
-    "heroEveryNLevels": 10,
-    "regionEveryNBosses": 3
-  },
-
-  "weapon": {
-    "_comment": "Damage multiplier = bonusPerLevel ^ level. Cost of level n -> n+1 = baseCost x costGrowth ^ n. Resets to 0 on ascension. Tuned by the pacing simulation (brief default was 1.10 and 1.35, see DECISIONS.md).",
-    "bonusPerLevel": 1.12,
-    "baseCost": 150,
-    "costGrowth": 1.25
-  },
-
-  "armor": {
-    "_comment": "Each level: +hpPerLevel max HP and +reductionPerLevel damage reduction (capped at maxReduction). Cost of level n -> n+1 = baseCost x costGrowth ^ n. Kept on ascension.",
-    "hpPerLevel": 20,
-    "reductionPerLevel": 0.05,
-    "maxReduction": 0.6,
-    "baseCost": 120,
-    "costGrowth": 1.35
-  },
-
-  "ascension": {
-    "_comment": "XP multiplier = perAscension ^ number of ASCEND events (New Game+ after the last boss file is beaten).",
-    "perAscension": 1.05
-  },
-
-  "shop": {
-    "_comment": "Charms equipped at once, and how many past days the shop uses to predict days-to-beat.",
-    "maxCharms": 2,
-    "forecastDays": 14
-  },
-
   "statLevels": {
     "_comment": "XP from level L to L+1 = base x growth ^ (L - 1). Every stat starts at level 1.",
     "base": 100,
     "growth": 1.15
   },
-
   "loot": {
     "_comment": "Chance that a validation also drops a cosmetic item you do not own yet. Cosmetic only, never coins or XP.",
     "dropRate": 0.05
+  },
+  "game": {
+    "_comment": "The tower-defense game (v4 brief 2-3). Waves run automatically every waveIntervalMinutes, at most maxAttemptsPerDay per game day. Enemy HP of wave n = enemyBaseHp x enemyHpGrowth^(n-1). Spot n beyond the free ones costs spotBaseCost x spotCostGrowth^n (n = spots already bought). Stat bonuses (...PerLevel, lives per Vitality) count the levels gained above level 1, so a new character has none; tower requirements use the level itself.",
+    "waveIntervalMinutes": 120,
+    "maxAttemptsPerDay": 16,
+    "enemyBaseHp": 24,
+    "enemyHpGrowth": 1.1,
+    "enemySpeed": 55,
+    "baseLives": 10,
+    "livesPerVitalityLevels": 3,
+    "spotBaseCost": 150,
+    "spotCostGrowth": 1.8,
+    "strengthDamagePerLevel": 0.03,
+    "intellectDamagePerLevel": 0.03,
+    "disciplineRatePerLevel": 0.015,
+    "spiritSlowPerLevel": 0.004,
+    "maxSlow": 0.9,
+    "socialIncomePerLevel": 0.03,
+    "creativityDiscountPerLevel": 0.005,
+    "maxCreativityDiscount": 0.15,
+    "maxMarketDiscount": 0.4,
+    "maxDiscount": 0.5,
+    "chainRange": 85,
+    "chainDamage": 0.75,
+    "poisonSpreadRange": 70,
+    "maxWaveSeconds": 900,
+    "replayFps": 10
   }
 }

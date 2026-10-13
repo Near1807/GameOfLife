@@ -1,0 +1,120 @@
+{
+  "_comment": "Enemies and wave composition (v4 brief 2), ported from the prototype. hp multiplies the wave's base HP (config game.enemyBaseHp x game.enemyHpGrowth^(wave-1)). speed multiplies game.enemySpeed. armor resists physical damage, ward resists magic. leak = lives lost when it reaches the base. A group appears from wave 'from', only on odd/even waves (parity) or every N waves (every) when given; count = base + floor(wave / per) (per 0 = no growth). gap = seconds between two enemies; groupPause = seconds between groups.",
+  "contractVersion": 1,
+  "enemies": {
+    "grunt": {
+      "name": "Grunt",
+      "hp": 1,
+      "speed": 1,
+      "armor": 0,
+      "ward": 0,
+      "air": false,
+      "color": "#ff6b81",
+      "radius": 7,
+      "leak": 1
+    },
+    "runner": {
+      "name": "Runner",
+      "hp": 0.5,
+      "speed": 1.8,
+      "armor": 0,
+      "ward": 0,
+      "air": false,
+      "color": "#ffd166",
+      "radius": 6,
+      "leak": 1
+    },
+    "armored": {
+      "name": "Armored",
+      "hp": 2.2,
+      "speed": 0.85,
+      "armor": 0.6,
+      "ward": 0,
+      "air": false,
+      "color": "#9aa5b1",
+      "radius": 9,
+      "leak": 1
+    },
+    "warded": {
+      "name": "Warded",
+      "hp": 1.8,
+      "speed": 0.95,
+      "armor": 0,
+      "ward": 0.6,
+      "air": false,
+      "color": "#b794f6",
+      "radius": 8,
+      "leak": 1
+    },
+    "flyer": {
+      "name": "Flyer",
+      "hp": 1.2,
+      "speed": 1.3,
+      "armor": 0,
+      "ward": 0,
+      "air": true,
+      "color": "#5bd1ff",
+      "radius": 7,
+      "leak": 1
+    },
+    "boss": {
+      "name": "Boss",
+      "hp": 25,
+      "speed": 0.5,
+      "armor": 0.3,
+      "ward": 0.3,
+      "air": false,
+      "color": "#ff9f43",
+      "radius": 16,
+      "leak": 5
+    }
+  },
+  "groups": [
+    {
+      "type": "grunt",
+      "from": 1,
+      "base": 5,
+      "per": 1,
+      "gap": 0.55
+    },
+    {
+      "type": "runner",
+      "from": 3,
+      "base": 4,
+      "per": 2,
+      "gap": 0.3
+    },
+    {
+      "type": "armored",
+      "from": 5,
+      "parity": "odd",
+      "base": 1,
+      "per": 3,
+      "gap": 0.9
+    },
+    {
+      "type": "warded",
+      "from": 7,
+      "parity": "even",
+      "base": 1,
+      "per": 3,
+      "gap": 0.9
+    },
+    {
+      "type": "flyer",
+      "from": 9,
+      "base": 2,
+      "per": 3,
+      "gap": 0.6
+    },
+    {
+      "type": "boss",
+      "from": 10,
+      "every": 10,
+      "base": 1,
+      "per": 0,
+      "gap": 1
+    }
+  ],
+  "groupPause": 1.4
+}

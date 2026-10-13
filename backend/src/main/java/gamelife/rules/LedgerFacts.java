@@ -92,29 +92,4 @@ public final class LedgerFacts {
         days.addAll(pausedDays(events));
         return days;
     }
-
-    /** Number of ASCEND events. */
-    public static int ascensions(List<LedgerEvent> events) {
-        return (int) events.stream().filter(e -> e.type() == EventType.ASCEND).count();
-    }
-
-    /** Weapon level = weapon UPGRADE events since the last ASCEND (brief 9.1: ascension resets it). */
-    public static int weaponLevel(List<LedgerEvent> events) {
-        int level = 0;
-        for (LedgerEvent e : events) {
-            if (e.type() == EventType.UPGRADE && "weapon".equals(Json.toMap(e.meta()).get("slot"))) {
-                level++;
-            } else if (e.type() == EventType.ASCEND) {
-                level = 0;
-            }
-        }
-        return level;
-    }
-
-    /** Armour level = all armour UPGRADE events (kept on ascension). */
-    public static int armorLevel(List<LedgerEvent> events) {
-        return (int) events.stream()
-                .filter(e -> e.type() == EventType.UPGRADE && "armor".equals(Json.toMap(e.meta()).get("slot")))
-                .count();
-    }
 }

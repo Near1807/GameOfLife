@@ -1,5 +1,5 @@
 import {
-  Coins, Crown, Flame, Gem, Gift, HeartPulse, Moon, Repeat, Shield, Skull, Smile, Sparkles, Star, Sword, Swords, Timer,
+  Castle, Coins, Crown, Flame, Gem, Gift, HeartPulse, MapPin, Moon, Repeat, Shield, Skull, Smile, Sparkles, Star, Sword, Swords, Timer,
   TrendingUp, Trophy, Zap, type LucideIcon,
 } from 'lucide-react';
 import type { AchievementStatus } from '../api';
@@ -7,7 +7,7 @@ import { Bar } from './Bar';
 
 /** Icon names the achievement data may use; anything else shows a trophy. */
 const ICONS: Record<string, LucideIcon> = {
-  Coins, Crown, Flame, Gem, Gift, HeartPulse, Moon, Repeat, Shield, Skull, Smile, Sparkles, Star, Sword, Swords, Timer,
+  Castle, Coins, Crown, Flame, Gem, Gift, HeartPulse, MapPin, Moon, Repeat, Shield, Skull, Smile, Sparkles, Star, Sword, Swords, Timer,
   TrendingUp, Trophy, Zap,
 };
 

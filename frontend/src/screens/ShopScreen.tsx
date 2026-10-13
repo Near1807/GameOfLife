@@ -1,91 +1,47 @@
 import { useEffect, useState } from 'react';
-import { Coins, Gem, Lock, Palette, Shield, Shirt, Sparkles, Sword, Swords } from 'lucide-react';
-import { api, type ShopItem, type ShopView, type Upgrade } from '../api';
+import { Coins, Lock, Palette, Shirt } from 'lucide-react';
+import { api, type ShopItem, type ShopView } from '../api';
 import type { Act } from '../types';
 import { Card } from '../ui/Card';
 import { Sprite } from '../ui/Sprite';
 
-type Tab = 'power' | 'charms' | 'looks' | 'themes';
+type Tab = 'looks' | 'themes';
 
 /**
- * The shop (brief 9.2, 9.3, 10): the owner decides where coins go. Damage (weapon) kills
- * faster, armour survives lazy days, charms give utility, looks and themes are only fun.
- * Every effect is spelled out, buying takes two taps, and new items appear from the content
- * folder with no code change.
+ * The shop (brief 10, v4 brief 4): looks only. Outfits, map skins and themes; power comes from
+ * the towers on the map. Buying takes two taps, and new items appear from the content folder with
+ * no code change.
  */
 export function ShopScreen(props: { act: Act; version: number }) {
   const [view, setView] = useState<ShopView | null>(null);
-  const [tab, setTab] = useState<Tab>('power');
+  const [tab, setTab] = useState<Tab>('looks');
   useEffect(() => {
     api.shop().then(setView).catch(() => {});
   }, [props.version]);
   if (!view) return <p className="muted">Loading…</p>;
 
   const of = (kinds: string[]) => view.items.filter((i) => kinds.includes(i.item.kind));
-  const charmsWorn = view.items.filter((i) => i.item.kind === 'charm' && i.status === 'EQUIPPED').length;
 
   return (
     <div className="page">
       <h1 className="page-title">Shop</h1>
       <p className="page-sub">
         <Coins size={14} style={{ verticalAlign: '-2px', color: 'var(--gold)' }} /> <b className="gold">{Math.round(view.balance).toLocaleString('en-US')}</b> coins.
-        Predictions use your last 14 days: about {Math.round(view.averageDailyXp)} XP a day.
+        Looks only: power comes from the towers on the map.
       </p>
-      <div className="choice-strip">
-        <span><Swords size={14} /> Damage: kill faster</span>
-        <span><Shield size={14} /> Armour: survive lazy days</span>
-        <span><Sparkles size={14} /> Charms: utility</span>
-        <span><Palette size={14} /> Looks: just fun</span>
-      </div>
       <div className="segmented" role="tablist">
-        {([['power', 'Gear'], ['charms', 'Charms'], ['looks', 'Looks'], ['themes', 'Themes']] as [Tab, string][]).map(([t, label]) => (
+        {([['looks', 'Looks'], ['themes', 'Themes']] as [Tab, string][]).map(([t, label]) => (
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>{label}</button>
         ))}
       </div>
 
-      {tab === 'power' && (
-        <div className="grid two">
-          <UpgradeCard u={view.weapon} icon={Sword} title="Weapon" act={props.act} />
-          <UpgradeCard u={view.armor} icon={Shield} title="Armour" act={props.act} />
-          {of(['weapon', 'armor']).map((i) => <ItemCard key={i.item.id} s={i} act={props.act} />)}
-        </div>
-      )}
-      {tab === 'charms' && (
-        <>
-          <p className="small muted">Wear up to {view.maxCharms} charms. Now wearing {charmsWorn}.</p>
-          <div className="grid two">{of(['charm']).map((i) => <ItemCard key={i.item.id} s={i} act={props.act} />)}</div>
-        </>
-      )}
       {tab === 'looks' && <div className="grid two">{of(['outfit', 'skin']).map((i) => <ItemCard key={i.item.id} s={i} act={props.act} />)}</div>}
       {tab === 'themes' && <div className="grid two">{of(['theme']).map((i) => <ItemCard key={i.item.id} s={i} act={props.act} />)}</div>}
     </div>
   );
 }
 
-function UpgradeCard(props: { u: Upgrade; icon: typeof Sword; title: string; act: Act }) {
-  const [confirm, setConfirm] = useState(false);
-  const u = props.u;
-  const can = u.status === 'AFFORDABLE';
-  return (
-    <Card title={`${props.title} · level ${u.level}`} icon={props.icon} iconColor="var(--gold)" glow={can}>
-      <p className="small" style={{ marginTop: 0 }}>{u.effectText}</p>
-      {confirm ? (
-        <div className="row">
-          <button className="btn primary grow" onClick={() => props.act(api.upgrade(u.slot)).finally(() => setConfirm(false))}>
-            Confirm: pay {Math.round(u.cost)}
-          </button>
-          <button className="btn ghost" onClick={() => setConfirm(false)}>Cancel</button>
-        </div>
-      ) : (
-        <button className={'btn block' + (can ? ' primary' : '')} disabled={!can} onClick={() => setConfirm(true)} aria-label={`upgrade ${u.slot}`}>
-          <Coins size={16} /> Level {u.level + 1} for {Math.round(u.cost)}
-        </button>
-      )}
-    </Card>
-  );
-}
-
-const KIND_ICON = { weapon: Sword, armor: Shield, charm: Gem, outfit: Shirt, skin: Palette, theme: Palette } as const;
+const KIND_ICON = { outfit: Shirt, skin: Palette, theme: Palette } as const;
 
 function ItemCard(props: { s: ShopItem; act: Act }) {
   const [confirm, setConfirm] = useState(false);

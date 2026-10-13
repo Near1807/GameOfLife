@@ -27,7 +27,7 @@ export function HabitsScreen(props: {
   const [rest, setRest] = useState<string[]>([]);
   const [name, setName] = useState('');
   const [tags, setTags] = useState<string[]>(['DISCIPLINE']);
-  const mult = props.state.multipliers.streak * props.state.multipliers.weapon * props.state.multipliers.ascension;
+  const mult = props.state.multipliers.streak;
 
   useEffect(() => {
     api.habits().then(setHabits).catch(() => {});

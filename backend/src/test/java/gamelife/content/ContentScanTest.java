@@ -11,7 +11,7 @@ import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Brief 12b and 14: folder scanning, sorting, loop-around, sidecar names, warnings. */
+/** Brief 12b and 14: folder scanning, sorting, sidecar names, warnings; v4 game data reload. */
 class ContentScanTest {
     @TempDir Path dir;
 
@@ -28,95 +28,93 @@ class ContentScanTest {
     }
 
     private ContentService scan() {
-        return new ContentService(dir.toString());
+        return new ContentService(dir.toString(), new gamelife.game.GameContent("../content",
+                gamelife.config.GameConfig.load(Path.of("../config/gamelife.json"))));
     }
 
     @Test
-    void bossesAreSortedByNumberWithSidecarNames() throws IOException {
-        png("enemies/boss_10.png", 64, 64);
-        png("enemies/boss_02.png", 256, 64); // a 4-frame strip
-        png("enemies/boss_1.png", 64, 64);
-        text("enemies/boss_02.json", "{\"name\": \"Doomscroll Wraith\", \"title\": \"It feeds\"}");
-        var c = scan().catalog();
-        assertThat(c.bosses()).extracting(ContentService.Art::number).containsExactly(1, 2, 10);
-        assertThat(c.bosses().get(0).name()).isEqualTo("Boss 1");           // no sidecar: default name
-        assertThat(c.bosses().get(1).name()).isEqualTo("Doomscroll Wraith");
-        assertThat(c.bosses().get(1).frames()).isEqualTo(4);
-        assertThat(c.warnings()).noneMatch(w -> w.startsWith("enemies/"));
-    }
-
-    @Test
-    void loopsAroundPastTheLastBossAndPicksHeroAndRegion() throws IOException {
-        png("enemies/boss_01.png", 64, 64);
-        png("enemies/boss_02.png", 64, 64);
-        png("enemies/boss_03.png", 64, 64);
-        png("hero/hero_01.png", 32, 32);
-        png("hero/hero_02.png", 128, 32);
-        png("regions/region_01.png", 320, 180);
-        png("regions/region_02.png", 320, 180);
+    void heroLooksAreSortedByNumberAndFollowTheLevel() throws IOException {
+        png("hero/hero_10.png", 32, 32);
+        png("hero/hero_02.png", 128, 32); // a 4-frame strip
+        png("hero/hero_1.png", 32, 32);
+        text("hero/hero_02.json", "{\"name\": \"Netrunner\"}");
         ContentService s = scan();
-        assertThat(s.bossArt(4).file()).endsWith("boss_01.png"); // boss 4 -> first picture again
-        assertThat(s.bossArt(6).file()).endsWith("boss_03.png");
-        assertThat(s.heroArt(9, 10).file()).endsWith("hero_01.png");  // levels 1-10: look 1
-        assertThat(s.heroArt(11, 10).file()).endsWith("hero_02.png"); // level 11: look 2
-        assertThat(s.heroArt(99, 10).file()).endsWith("hero_02.png"); // capped at the last look
-        assertThat(s.regionArt(3, 3).file()).endsWith("region_01.png"); // bosses 1-3: region 1
-        assertThat(s.regionArt(4, 3).file()).endsWith("region_02.png");
-        assertThat(s.regionArt(7, 3).file()).endsWith("region_01.png"); // loops
+        var c = s.catalog();
+        assertThat(c.heroes()).extracting(ContentService.Art::number).containsExactly(1, 2, 10);
+        assertThat(c.heroes().get(0).name()).isEqualTo("Hero 1");           // no sidecar: default name
+        assertThat(c.heroes().get(1).name()).isEqualTo("Netrunner");
+        assertThat(c.heroes().get(1).frames()).isEqualTo(4);
+        assertThat(s.heroArt(9, 10).file()).endsWith("hero_1.png");    // levels 1-10: look 1
+        assertThat(s.heroArt(11, 10).file()).endsWith("hero_02.png");  // level 11: look 2
+        assertThat(s.heroArt(99, 10).file()).endsWith("hero_10.png");  // capped at the last look
+        assertThat(c.warnings()).noneMatch(w -> w.startsWith("hero/"));
     }
 
     @Test
     void badFilesAreWarningsNeverCrashes() throws IOException {
-        png("enemies/boss_01.png", 64, 64);
-        png("enemies/boss_1.png", 64, 64);              // duplicate number
-        png("enemies/boss_02.png", 50, 64);             // wrong size
-        png("enemies/dragon.png", 64, 64);              // wrong name
-        text("enemies/boss_03.png", "not a picture");   // unreadable
-        text("enemies/boss_04.gif", "x");               // wrong format
-        png("items/weapon_lonely.png", 32, 32);         // image without JSON
-        png("items/charm_bad.png", 32, 32);
-        text("items/charm_bad.json", "{ broken");       // invalid JSON
-        png("items/charm_ok.png", 32, 32);
-        text("items/charm_ok.json", "{\"id\":\"charm_ok\",\"name\":\"Ok\",\"kind\":\"charm\",\"price\":100,\"effect\":\"shieldBonus\",\"value\":0.05}");
-        png("items/charm_big.png", 64, 64);
-        text("items/charm_big.json", "{\"id\":\"charm_big\",\"name\":\"Big\",\"kind\":\"charm\",\"price\":100}");
-        text("items/hat.json", "{\"id\":\"hat\",\"name\":\"Hat\",\"kind\":\"hat\",\"price\":10}");
+        png("hero/hero_01.png", 32, 32);
+        png("hero/hero_1.png", 32, 32);                 // duplicate number
+        png("hero/hero_02.png", 50, 32);                // wrong size
+        png("hero/knight.png", 32, 32);                 // wrong name
+        text("hero/hero_03.png", "not a picture");      // unreadable
+        png("items/skin_lonely.png", 32, 32);           // image without JSON
+        png("items/skin_bad.png", 32, 32);
+        text("items/skin_bad.json", "{ broken");        // invalid JSON
+        png("items/skin_ok.png", 32, 32);
+        text("items/skin_ok.json", "{\"id\":\"skin_ok\",\"name\":\"Ok\",\"kind\":\"skin\",\"price\":100,\"tokens\":{\"filter\":\"hue-rotate(10deg)\"}}");
+        png("items/skin_big.png", 64, 64);
+        text("items/skin_big.json", "{\"id\":\"skin_big\",\"name\":\"Big\",\"kind\":\"skin\",\"price\":100}");
+        png("items/charm_old.png", 32, 32);              // v3 power items are no longer sold
+        text("items/charm_old.json", "{\"id\":\"charm_old\",\"name\":\"Old\",\"kind\":\"charm\",\"price\":10}");
 
         var c = scan().catalog();
-        assertThat(c.bosses()).hasSize(1);
-        assertThat(c.items()).extracting(ContentService.Item::id).containsExactly("charm_ok");
+        assertThat(c.heroes()).hasSize(1);
+        assertThat(c.items()).extracting(ContentService.Item::id).containsExactly("skin_ok");
         String all = String.join("\n", c.warnings());
         assertThat(all).contains("duplicate number 1")
-                .contains("boss_02.png: wrong size 50x64")
-                .contains("dragon.png: wrong name")
-                .contains("boss_03.png: not a readable PNG")
-                .contains("boss_04.gif: wrong name or format")
-                .contains("weapon_lonely.png: shop image without")
-                .contains("charm_bad.json: not valid JSON")
-                .contains("charm_big.png: wrong size 64x64")
-                .contains("hat.png")
-                .contains("hero/: no hero_NN.png found");
+                .contains("hero_02.png: wrong size 50x32")
+                .contains("knight.png: wrong name")
+                .contains("hero_03.png: not a readable PNG")
+                .contains("skin_lonely.png: shop image without")
+                .contains("skin_bad.json: not valid JSON")
+                .contains("skin_big.png: wrong size 64x64")
+                .contains("charm_old.json: unknown kind");
     }
 
     @Test
     void addingTwoFilesAddsABuyableItemAfterReload() throws IOException {
-        png("enemies/boss_01.png", 64, 64);
+        png("hero/hero_01.png", 32, 32);
         ContentService s = scan();
         assertThat(s.catalog().items()).isEmpty();
-        png("items/armor_new.png", 32, 32);
-        text("items/armor_new.json", "{\"id\":\"armor_new\",\"name\":\"New\",\"kind\":\"armor\",\"price\":250,\"bonus\":{\"maxHp\":15}}");
+        png("items/outfit_new.png", 128, 32);
+        text("items/outfit_new.json", "{\"id\":\"outfit_new\",\"name\":\"New\",\"kind\":\"outfit\",\"price\":250}");
         s.reload();
-        assertThat(s.item("armor_new")).isNotNull();
-        assertThat(s.item("armor_new").bonus().maxHp()).isEqualTo(15.0);
+        assertThat(s.item("outfit_new")).isNotNull();
+        assertThat(s.item("outfit_new").frames()).isEqualTo(4);
     }
 
     @Test
     void theRealContentFolderHasNoWarnings() {
-        var c = new ContentService("../content").catalog();
+        var c = new ContentService("../content", new gamelife.game.GameContent("../content",
+                gamelife.config.GameConfig.load(Path.of("../config/gamelife.json")))).catalog();
         assertThat(c.warnings()).isEmpty();
-        assertThat(c.bosses()).hasSize(10);
         assertThat(c.heroes()).hasSize(3);
-        assertThat(c.regions()).hasSize(4);
-        assertThat(c.items()).extracting(ContentService.Item::kind).contains("weapon", "armor", "charm", "outfit", "skin", "theme");
+        assertThat(c.items()).extracting(ContentService.Item::kind).contains("outfit", "skin", "theme")
+                .doesNotContain("weapon", "armor", "charm");
+    }
+
+    @Test
+    void aBrokenGameFileOnReloadKeepsTheOldDataAndWarns(@TempDir Path game) throws IOException {
+        for (String f : new String[]{"towers.json", "waves.json"}) {
+            Files.copy(Path.of("../content", f), game.resolve(f));
+        }
+        Files.createDirectories(game.resolve("maps"));
+        Files.copy(Path.of("../content/maps/map_01.json"), game.resolve("maps/map_01.json"));
+        var gc = new gamelife.game.GameContent(game.toString(), gamelife.config.GameConfig.load(Path.of("../config/gamelife.json")));
+        Files.writeString(game.resolve("towers.json"), "{ broken");
+        ContentService s = new ContentService(dir.toString(), gc);
+        assertThat(String.join("\n", s.catalog().warnings())).contains("Cannot read the game data")
+                .contains("previous game data is still used");
+        assertThat(gc.catalog().tower("archer")).isNotNull();
     }
 }

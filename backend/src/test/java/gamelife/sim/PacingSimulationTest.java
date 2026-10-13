@@ -1,32 +1,44 @@
 package gamelife.sim;
 
 import gamelife.config.GameConfig;
+import gamelife.game.GameCatalog;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Brief 9.4 and 14: the simulation runs and all three profiles can progress, at different speeds. */
+/** v4 brief 6: the pacing targets that the shipped config meets (see docs/PACING.md). */
 class PacingSimulationTest {
-    private final GameConfig cfg = GameConfig.load(Path.of("../config/gamelife.json"));
+    static final GameConfig CFG = GameConfig.load(Path.of("../config/gamelife.json"));
+    static final GameCatalog CAT = GameCatalog.load(Path.of("../content"));
 
     @Test
-    void allThreeProfilesProgressAtDifferentSpeeds() {
-        var r = PacingSimulation.runAll(cfg);
-        assertThat(r).allMatch(PacingSimulation.Result::progresses);
-        var lazy = r.get(0);
-        var average = r.get(1);
-        var strong = r.get(2);
-        assertThat(lazy.daysToBoss5()).isGreaterThan(average.daysToBoss5());
-        assertThat(average.daysToBoss5()).isGreaterThan(strong.daysToBoss5());
+    void everyProfileProgressesAndKeepsBuyingAllYear() {
+        for (PacingSimulation.Profile p : PacingSimulation.Profile.values()) {
+            var r = PacingSimulation.run(p, 365, CFG, CAT);
+            assertThat(r.waveOnDay().get(30)).as(p + " day 30").isGreaterThan(5);
+            assertThat(r.waveOnDay().get(100)).as(p + " day 100").isGreaterThan(r.waveOnDay().get(30));
+            assertThat(r.waveOnDay().get(365)).as(p + " day 365").isGreaterThan(r.waveOnDay().get(100));
+            assertThat(r.lastPurchaseDay()).as(p + " still buying late in the year").isGreaterThan(250);
+            assertThat(r.optionsLeft()).as(p + " something left to buy").isPositive();
+        }
     }
 
     @Test
-    void pacingTargetsOfTheBrief() {
-        var average = PacingSimulation.run(PacingSimulation.PROFILES.get(1), cfg, 365);
-        assertThat(average.daysToBoss1()).isBetween(6, 8);              // about 6 to 8 days
-        assertThat(PacingSimulation.zeroDaysToFall(cfg)).isBetween(5, 6); // a lazy stretch risks a fall in ~5 days
-        assertThat(PacingSimulation.strongWeekDaysAtDay60(cfg)).isBetween(1, 2); // a strong week clears a boss in 1-2 days
+    void strongIsFarAheadInTheFirstMonthAndNeverBehind() {
+        var lazy = PacingSimulation.run(PacingSimulation.Profile.LAZY, 365, CFG, CAT);
+        var strong = PacingSimulation.run(PacingSimulation.Profile.STRONG, 365, CFG, CAT);
+        assertThat(strong.waveOnDay().get(30)).isGreaterThanOrEqualTo((int) (1.7 * lazy.waveOnDay().get(30)));
+        for (int day : new int[]{30, 100, 365}) {
+            assertThat(strong.waveOnDay().get(day)).isGreaterThanOrEqualTo(lazy.waveOnDay().get(day));
+        }
+    }
+
+    @Test
+    void theSimulationIsDeterministic() {
+        var a = PacingSimulation.run(PacingSimulation.Profile.AVERAGE, 60, CFG, CAT);
+        var b = PacingSimulation.run(PacingSimulation.Profile.AVERAGE, 60, CFG, CAT);
+        assertThat(a).isEqualTo(b);
     }
 }

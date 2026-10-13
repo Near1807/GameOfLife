@@ -1,0 +1,110 @@
+{
+  "_comment": "A map (v4 brief 2): the path from spawn to base and the tower spots, in a 960x540 field. The first freeSpots spots are open from the start. unlockAfterWave: the wave to clear before this map is available.",
+  "contractVersion": 1,
+  "id": "map_01",
+  "name": "Neon Crossing",
+  "width": 960,
+  "height": 540,
+  "freeSpots": 3,
+  "unlockAfterWave": 0,
+  "path": [
+    [
+      -20,
+      120
+    ],
+    [
+      220,
+      120
+    ],
+    [
+      220,
+      400
+    ],
+    [
+      480,
+      400
+    ],
+    [
+      480,
+      150
+    ],
+    [
+      740,
+      150
+    ],
+    [
+      740,
+      430
+    ],
+    [
+      980,
+      430
+    ]
+  ],
+  "base": [
+    940,
+    430
+  ],
+  "spots": [
+    [
+      130,
+      185
+    ],
+    [
+      300,
+      200
+    ],
+    [
+      150,
+      300
+    ],
+    [
+      420,
+      280
+    ],
+    [
+      130,
+      55
+    ],
+    [
+      330,
+      320
+    ],
+    [
+      350,
+      465
+    ],
+    [
+      545,
+      280
+    ],
+    [
+      600,
+      215
+    ],
+    [
+      600,
+      85
+    ],
+    [
+      680,
+      260
+    ],
+    [
+      800,
+      280
+    ],
+    [
+      680,
+      385
+    ],
+    [
+      860,
+      370
+    ],
+    [
+      860,
+      495
+    ]
+  ]
+}

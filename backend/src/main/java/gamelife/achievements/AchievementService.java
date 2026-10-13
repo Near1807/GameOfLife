@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import gamelife.character.CharacterService;
 import gamelife.common.Json;
 import gamelife.config.GameConfig;
-import gamelife.fight.FightService;
+import gamelife.game.WaveService;
 import gamelife.gear.GearService;
 import gamelife.ledger.EventType;
 import gamelife.ledger.LedgerEvent;
@@ -48,7 +48,8 @@ public class AchievementService {
 
     /** The fact names a rule may use. statLevel needs "stat". */
     public static final Set<String> FACTS = Set.of("tasksDone", "focusBlocks", "focusHours", "habitsDone", "checkins",
-            "bestStreak", "kills", "ascensions", "falls", "fullShieldDays", "weaponLevel", "armorLevel", "purchases",
+            "bestStreak", "furthestWave", "towersBuilt", "spotsUnlocked", "maxTier", "towerTypes", "marketsBuilt",
+            "retriedClears", "purchases",
             "itemsOwned", "loot", "bestDayXp", "xpTotal", "comebacks", "restDays", "overallLevel", "minStatLevel",
             "balanced", "statLevel");
 
@@ -56,18 +57,18 @@ public class AchievementService {
     private final LedgerService ledger;
     private final CharacterService character;
     private final GearService gear;
-    private final FightService fight;
+    private final WaveService waves;
     private final GameConfig config;
     private final GameTime time;
 
     public AchievementService(@Value("${gamelife.content-dir}") String contentDir, LedgerService ledger,
-                              CharacterService character, GearService gear, FightService fight, GameConfig config,
+                              CharacterService character, GearService gear, WaveService waves, GameConfig config,
                               GameTime time) {
         this.file = Path.of(contentDir, "achievements.json");
         this.ledger = ledger;
         this.character = character;
         this.gear = gear;
-        this.fight = fight;
+        this.waves = waves;
         this.config = config;
         this.time = time;
     }
@@ -84,7 +85,7 @@ public class AchievementService {
     }
 
     public List<Status> statuses() {
-        fight.sync();
+        waves.sync();
         List<LedgerEvent> events = ledger.all();
         Map<String, Double> facts = facts(events);
         var stats = character.compute(events).stats();
@@ -103,7 +104,9 @@ public class AchievementService {
     /** Every fact a rule can use, computed from the ledger. */
     Map<String, Double> facts(List<LedgerEvent> events) {
         Map<String, Double> f = new HashMap<>();
-        double tasks = 0, focusMin = 0, blocks = 0, habits = 0, checkins = 0, kills = 0, falls = 0, shielded = 0;
+        double tasks = 0, focusMin = 0, blocks = 0, habits = 0, checkins = 0, furthest = 0, built = 0, spots = 0;
+        double maxTier = 0, markets = 0, retried = 0;
+        java.util.Set<Object> types = new java.util.HashSet<>();
         double purchases = 0, loot = 0, xpTotal = 0, comebacks = 0;
         Map<LocalDate, Double> xpByDay = new LinkedHashMap<>();
         for (LedgerEvent e : events) {
@@ -117,11 +120,17 @@ public class AchievementService {
                 }
                 case HABIT_DONE -> habits++;
                 case CHECKIN -> checkins++;
-                case STAGE_CLEARED -> kills++;
-                case HERO_FELL -> falls++;
-                case BOSS_ATTACK -> {
-                    if (((Number) m.getOrDefault("shield", 0)).doubleValue() >= 1) shielded++;
+                case WAVE_CLEARED -> {
+                    furthest = Math.max(furthest, ((Number) m.get("wave")).doubleValue());
+                    if (((Number) m.get("attempt")).intValue() > 1) retried++;
                 }
+                case TOWER_BUILT -> {
+                    built++;
+                    types.add(m.get("tower"));
+                    if ("income".equals(m.get("tower"))) markets++;
+                }
+                case TOWER_UPGRADED -> maxTier = Math.max(maxTier, ((Number) m.get("tier")).doubleValue());
+                case SPOT_UNLOCKED -> spots++;
                 case PURCHASE -> {
                     if (Boolean.TRUE.equals(m.get("loot"))) loot++;
                     else purchases++;
@@ -150,12 +159,13 @@ public class AchievementService {
         f.put("habitsDone", habits);
         f.put("checkins", checkins);
         f.put("bestStreak", (double) best);
-        f.put("kills", kills);
-        f.put("ascensions", (double) LedgerFacts.ascensions(events));
-        f.put("falls", falls);
-        f.put("fullShieldDays", shielded);
-        f.put("weaponLevel", (double) l.weaponLevel());
-        f.put("armorLevel", (double) l.armorLevel());
+        f.put("furthestWave", furthest);
+        f.put("towersBuilt", built);
+        f.put("spotsUnlocked", spots);
+        f.put("maxTier", maxTier);
+        f.put("towerTypes", (double) types.size());
+        f.put("marketsBuilt", markets);
+        f.put("retriedClears", retried);
         f.put("purchases", purchases);
         f.put("itemsOwned", (double) l.owned().stream().filter(id -> !id.equals("theme_nebula")).count());
         f.put("loot", loot);
