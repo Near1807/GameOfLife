@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Shop item (content/items/NAME.json)",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "kind",
+    "price"
+  ],
+  "properties": {
+    "contractVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "name": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "weapon",
+        "armor",
+        "charm",
+        "outfit",
+        "skin"
+      ]
+    },
+    "slot": {
+      "type": "string"
+    },
+    "price": {
+      "type": "number",
+      "minimum": 0
+    },
+    "description": {
+      "type": "string"
+    },
+    "bonus": {
+      "type": "object",
+      "properties": {
+        "damagePct": {
+          "type": "number"
+        },
+        "maxHp": {
+          "type": "number"
+        },
+        "reduction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.6
+        }
+      }
+    },
+    "effect": {
+      "type": "string",
+      "enum": [
+        "shieldBonus",
+        "shieldHeal",
+        "freezeCapacity",
+        "comebackBonus",
+        "goalReduction"
+      ]
+    },
+    "value": {
+      "type": "number"
+    },
+    "requires": {
+      "type": "object",
+      "required": [
+        "stat",
+        "level"
+      ],
+      "properties": {
+        "stat": {
+          "type": "string",
+          "enum": [
+            "STRENGTH",
+            "CREATIVITY",
+            "INTELLECT",
+            "DISCIPLINE",
+            "SOCIAL",
+            "VITALITY",
+            "SPIRIT"
+          ]
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "tokens": {
+      "type": "object"
+    }
+  }
+}

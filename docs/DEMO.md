@@ -1,5 +1,29 @@
 # Demo
 
+## Version 3 (losable fight, shop, content folder)
+
+Use a throwaway database (`--gamelife.db-path=../data/test.db`, see the README).
+
+1. **Home → arena:** the Bug Queen (800 HP, hits 20 a night) faces your hero. Tick a quest: a
+   projectile flies, the boss flashes, the damage floats up, stat orbs fly into the stat bars.
+   A quest of 100+ XP is a critical hit.
+2. **Shield:** under the arena, "Shield today" fills with today's XP. Below the goal it says how
+   hard the boss will hit tonight; at 100 XP you are fully shielded and heal.
+3. **The morning after:** restart with `--gamelife.clock-offset-hours=24`. The arena shows
+   "While you were away: the boss hit for 12, your shield blocked 8" and the hero bar drops.
+4. **Defeat:** restart with `--gamelife.clock-offset-hours=192`. After a lazy week the hero falls:
+   a "You fell" moment, the boss heals, and it shows "Defeated you 1×". Coins and stats stay.
+5. **Victory:** a quest of 800 minutes kills the boss: "Boss defeated", +100 coins, an achievement
+   toast, then the next boss's intro.
+6. **Shop (tap the coins):** weapon and armour levels with their effect in words, charms (2 max),
+   gear, looks and themes. Buy takes two taps. A theme restyles the whole app.
+7. **Boss tab:** the boss, the campaign map from `content/enemies`, the pause button, and the
+   ascension card after the last boss. Weekly review and stats are the other two tabs.
+8. **Hero → Achievements:** 38 badges with progress bars.
+9. **Settings → Content folder:** drop `content/enemies/boss_11.png` (64×64) and press
+   "Reload content": it joins the map. Drop a wrong-size picture: a warning appears instead.
+10. **Install:** on the phone, "Add to Home screen".
+
 ## Version 2, step 3 (weekly boss, review, stats)
 
 1. **Home:** the Bug Queen (stage 1, 800 HP) sits under your hero. Tick any quest: the boss

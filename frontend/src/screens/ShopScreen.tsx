@@ -38,7 +38,7 @@ export function ShopScreen(props: { act: Act; version: number }) {
         <span><Palette size={14} /> Looks: just fun</span>
       </div>
       <div className="segmented" role="tablist">
-        {([['power', 'Weapon & armour'], ['charms', 'Charms'], ['looks', 'Looks'], ['themes', 'Themes']] as [Tab, string][]).map(([t, label]) => (
+        {([['power', 'Gear'], ['charms', 'Charms'], ['looks', 'Looks'], ['themes', 'Themes']] as [Tab, string][]).map(([t, label]) => (
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>{label}</button>
         ))}
       </div>

@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "content/achievements.json",
+  "type": "object",
+  "required": [
+    "achievements"
+  ],
+  "properties": {
+    "contractVersion": {
+      "type": "integer"
+    },
+    "achievements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "rule"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "rule": {
+            "type": "object",
+            "required": [
+              "fact",
+              "min"
+            ],
+            "properties": {
+              "fact": {
+                "type": "string",
+                "enum": [
+                  "tasksDone",
+                  "focusBlocks",
+                  "focusHours",
+                  "habitsDone",
+                  "checkins",
+                  "bestStreak",
+                  "kills",
+                  "ascensions",
+                  "falls",
+                  "fullShieldDays",
+                  "weaponLevel",
+                  "armorLevel",
+                  "purchases",
+                  "itemsOwned",
+                  "loot",
+                  "bestDayXp",
+                  "xpTotal",
+                  "comebacks",
+                  "restDays",
+                  "overallLevel",
+                  "minStatLevel",
+                  "balanced",
+                  "statLevel"
+                ]
+              },
+              "stat": {
+                "type": "string",
+                "enum": [
+                  "STRENGTH",
+                  "CREATIVITY",
+                  "INTELLECT",
+                  "DISCIPLINE",
+                  "SOCIAL",
+                  "VITALITY",
+                  "SPIRIT"
+                ]
+              },
+              "min": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
