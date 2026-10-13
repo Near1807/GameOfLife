@@ -26,11 +26,6 @@ public record GameConfig(
         Habit habit,
         Checkin checkin,
         Streak streak,
-        Fight fight,
-        Weapon weapon,
-        Armor armor,
-        Ascension ascension,
-        Shop shop,
         StatLevels statLevels,
         Loot loot,
         Game game) {
@@ -47,7 +42,8 @@ public record GameConfig(
 
     public record Home(double dailyXpGoal) {}
 
-    public record Character(int balancedMinLevel, int balancedMaxGap) {}
+    /** heroEveryNLevels: the hero picture changes every N overall levels. */
+    public record Character(int balancedMinLevel, int balancedMaxGap, int heroEveryNLevels) {}
 
     public record Timer(double xpPerMinute, List<Integer> minuteChips, int minMinutes, int maxMinutes,
                         int defaultMinutes, int earlyStopMinMinutes, List<String> defaultTags) {}
@@ -59,20 +55,6 @@ public record GameConfig(
     public record Streak(double factor, double exponent, int freezeEveryCountedDays, int maxFreezes,
                          int maxRestDaysPerWeek, int restDayMaxDaysAhead, int comebackGapDays,
                          double comebackMultiplier) {}
-
-    public record Weapon(double bonusPerLevel, double baseCost, double costGrowth) {}
-
-    public record Ascension(double perAscension) {}
-
-    public record Fight(double bossBaseHp, double bossHpGrowth, double bossBaseAtk, double bossAtkPerBoss,
-                        double ascensionBossScale, double heroBaseHp, double heroHpPerVitalityLevel,
-                        double fullShieldHeal, double killRewardCoins, String defeatMode, double hardModeCoinLoss,
-                        int pauseMaxDays, int pauseWindowDays, int heroEveryNLevels, int regionEveryNBosses) {}
-
-    public record Armor(double hpPerLevel, double reductionPerLevel, double maxReduction, double baseCost,
-                        double costGrowth) {}
-
-    public record Shop(int maxCharms, int forecastDays) {}
 
     public record StatLevels(double base, double growth) {}
 

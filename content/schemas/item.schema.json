@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Shop item (content/items/NAME.json)",
+  "title": "Cosmetic shop item (content/items/NAME.json). Looks only, no power (v4).",
   "type": "object",
   "required": [
     "id",
@@ -23,9 +23,6 @@
     "kind": {
       "type": "string",
       "enum": [
-        "weapon",
-        "armor",
-        "charm",
         "outfit",
         "skin"
       ]
@@ -39,35 +36,6 @@
     },
     "description": {
       "type": "string"
-    },
-    "bonus": {
-      "type": "object",
-      "properties": {
-        "damagePct": {
-          "type": "number"
-        },
-        "maxHp": {
-          "type": "number"
-        },
-        "reduction": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 0.6
-        }
-      }
-    },
-    "effect": {
-      "type": "string",
-      "enum": [
-        "shieldBonus",
-        "shieldHeal",
-        "freezeCapacity",
-        "comebackBonus",
-        "goalReduction"
-      ]
-    },
-    "value": {
-      "type": "number"
     },
     "requires": {
       "type": "object",

@@ -3,7 +3,8 @@ package gamelife.review;
 import gamelife.common.Json;
 import gamelife.common.Money;
 import gamelife.config.GameConfig;
-import gamelife.fight.FightService;
+import gamelife.game.GameLedger;
+import gamelife.game.WaveService;
 import gamelife.habits.Habit;
 import gamelife.habits.HabitRepository;
 import gamelife.ledger.EventType;
@@ -25,7 +26,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 /**
- * Weekly review (brief 9.1) and stats dashboard (v2 4.5). Read-only, computed from the ledger.
+ * Weekly review (v4 brief 4) and stats dashboard (v2 4.5). Read-only, computed from the ledger.
  */
 @Service
 public class ReviewService {
@@ -33,11 +34,11 @@ public class ReviewService {
     private final HabitRepository habits;
     private final GameConfig config;
     private final GameTime time;
-    private final FightService fight;
+    private final WaveService waves;
 
     public ReviewService(LedgerService ledger, HabitRepository habits, GameConfig config, GameTime time,
-                         FightService fight) {
-        this.fight = fight;
+                         WaveService waves) {
+        this.waves = waves;
         this.ledger = ledger;
         this.habits = habits;
         this.config = config;
@@ -51,18 +52,20 @@ public class ReviewService {
     public record Correction(LocalDate day, String label, double xp, String reason) {}
 
     /**
-     * A calendar-week report (brief 9.1: it does not control the boss). damageDealt = XP validated
-     * that week; damageTaken = the boss attacks for days of that week.
+     * A calendar-week report (v4 brief 4). xp = XP validated that week. Waves: attempts whose slot
+     * falls in the week (an automatic attempt counts for its slot, even if written later).
+     * furthestWave = the highest wave cleared by the end of the week. coinsEarned = coins paid by real
+     * actions; coinsSpent = towers, spots and shop, minus sale refunds.
      */
     public record WeekReview(LocalDate weekStart, LocalDate previousWeek, LocalDate nextWeek, boolean currentWeek,
-                             double damageDealt, double damageTaken, double damageBlocked, int falls,
-                             int bossesDefeated, List<String> bossNames, List<DayXp> days, Map<String, Double> statXp, int tasksDone,
+                             double xp, int wavesCleared, int wavesFailed, int furthestWave, double coinsEarned,
+                             double coinsSpent, int towersBuilt, List<DayXp> days, Map<String, Double> statXp, int tasksDone,
                              int focusMinutes, int habitsDone, Double averageMood, int streakAtEnd,
                              List<SkippedHabit> skippedHabits, List<Correction> corrections) {}
 
     /** Review of the game week containing `day` (default: this week). */
     public WeekReview week(LocalDate day) {
-        fight.sync(); // the boss attacks of past days must be written before they are reported
+        waves.sync(); // the wave attempts missed while the app was closed come first
         LocalDate today = time.today();
         LocalDate start = GameTime.weekStart(day == null ? today : day);
         LocalDate end = start.plusDays(7); // exclusive
@@ -88,23 +91,30 @@ public class ReviewService {
         int habitsDone = 0;
         List<Integer> moods = new ArrayList<>();
         List<Correction> corrections = new ArrayList<>();
-        double dealt = 0, taken = 0, blocked = 0;
-        int falls = 0;
-        List<String> killed = new ArrayList<>();
-        for (LedgerEvent e : all) { // attacks belong to the day they punish, written the morning after
-            if (e.type() == EventType.BOSS_ATTACK) {
+        double xp = 0, earned = 0, spent = 0;
+        int cleared = 0, failed = 0, furthest = 0, built = 0;
+        for (LedgerEvent e : all) { // an attempt belongs to the day of its slot, maybe written later
+            if (e.type() == EventType.WAVE_CLEARED || e.type() == EventType.WAVE_FAILED) {
                 Map<String, Object> m = Json.toMap(e.meta());
-                LocalDate d = LocalDate.parse(String.valueOf(m.get("date")));
+                LocalDate d = time.gameDay(java.time.Instant.parse(String.valueOf(m.get("at"))));
+                boolean won = e.type() == EventType.WAVE_CLEARED;
+                if (won && d.isBefore(end)) {
+                    furthest = Math.max(furthest, ((Number) m.get("wave")).intValue());
+                }
                 if (!d.isBefore(start) && d.isBefore(end)) {
-                    taken += ((Number) m.get("damage")).doubleValue();
-                    blocked += ((Number) m.get("blocked")).doubleValue();
+                    if (won) cleared++;
+                    else failed++;
                 }
             }
         }
         for (LedgerEvent e : inWeek) {
-            if (e.xp().signum() > 0) dealt += e.xp().doubleValue();
-            if (e.type() == EventType.HERO_FELL) falls++;
-            if (e.type() == EventType.STAGE_CLEARED) killed.add(e.label().replaceFirst("^Defeated ", ""));
+            if (e.xp().signum() > 0) xp += e.xp().doubleValue();
+            if (EventType.VALIDATIONS.contains(e.type()) || e.type() == EventType.TASK_UNDONE) {
+                earned += e.currencyDelta().doubleValue();
+            } else if (e.type() == EventType.PURCHASE || GameLedger.BUILD_TYPES.contains(e.type())) {
+                spent -= e.currencyDelta().doubleValue();
+            }
+            if (e.type() == EventType.TOWER_BUILT) built++;
             Map<String, Object> meta = Json.toMap(e.meta());
             switch (e.type()) {
                 case TASK_DONE -> tasksDone++;
@@ -126,8 +136,8 @@ public class ReviewService {
         LocalDate first = all.isEmpty() ? today : all.get(0).gameDay();
         return new WeekReview(start, start.isAfter(GameTime.weekStart(first)) ? start.minusDays(7) : null,
                 end.isAfter(today) ? null : end, start.equals(GameTime.weekStart(today)),
-                Math.round(dealt * 100) / 100.0, Math.round(taken * 100) / 100.0, Math.round(blocked * 100) / 100.0,
-                falls, killed.size(), killed, days, statXp, tasksDone,
+                Math.round(xp * 100) / 100.0, cleared, failed, furthest, Math.round(earned * 100) / 100.0,
+                Math.round(spent * 100) / 100.0, built, days, statXp, tasksDone,
                 focus, habitsDone, mood, streakAtEnd, skippedHabits(start, end, today, rest), corrections);
     }
 
@@ -160,10 +170,10 @@ public class ReviewService {
 
     public record Dashboard(int days, List<DayStats> history, Map<String, Double> statXpPeriod, double xpPeriod,
                             double xpAllTime, double focusHoursAllTime, int tasksDoneAllTime, int bestStreak,
-                            int currentStreak, int countedDaysAllTime, int bossesDefeated) {}
+                            int currentStreak, int countedDaysAllTime, int furthestWave) {}
 
     public Dashboard dashboard(int days) {
-        fight.sync();
+        waves.sync();
         int n = Math.max(7, Math.min(365, days));
         LocalDate today = time.today();
         LocalDate from = today.minusDays(n - 1);
@@ -193,7 +203,7 @@ public class ReviewService {
         double xpAll = 0;
         int focusMinutes = 0;
         int tasks = 0;
-        int bosses = 0;
+        int furthest = 0;
         for (LedgerEvent e : all) {
             xpAll += e.xp().doubleValue();
             if (e.type() == EventType.TIMER_VALIDATED) {
@@ -201,7 +211,9 @@ public class ReviewService {
             }
             if (e.type() == EventType.TASK_DONE) tasks++;
             if (e.type() == EventType.TASK_UNDONE) tasks--;
-            if (e.type() == EventType.STAGE_CLEARED) bosses++;
+            if (e.type() == EventType.WAVE_CLEARED) {
+                furthest = Math.max(furthest, ((Number) Json.toMap(e.meta()).get("wave")).intValue());
+            }
         }
         int best = 0;
         if (!counted.isEmpty()) {
@@ -214,6 +226,6 @@ public class ReviewService {
         periodStats.replaceAll((k, v) -> Math.round(v * 100) / 100.0);
         return new Dashboard(n, history, periodStats, Math.round(xpPeriod * 100) / 100.0,
                 Math.round(xpAll * 100) / 100.0, Math.round(focusMinutes / 6.0) / 10.0, tasks, best, current,
-                counted.size(), bosses);
+                counted.size(), furthest);
     }
 }

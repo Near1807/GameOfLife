@@ -1,27 +1,20 @@
-// What this device has already shown, so the recap and the boss intro play once (brief 11).
-// Stored in the browser: it is display state, not game data. attackId -1 means "never opened".
+// What this device has already shown, so the "while you were away" recap plays once (brief 11).
+// Stored in the browser: it is display state, not game data.
 
-export interface Seen {
-  attackId: number;
-  fallId: number;
-  fights: string[];
-}
+const KEY = 'gamelife.seenAttempt';
 
-const KEY = 'gamelife.seen';
-
-export function loadSeen(): Seen {
+/** The key of the last wave attempt this device has shown, or null on a first visit. */
+export function loadSeenAttempt(): string | null {
   try {
-    const s = JSON.parse(localStorage.getItem(KEY) ?? 'null');
-    if (s && typeof s.attackId === 'number') return { attackId: s.attackId, fallId: s.fallId ?? 0, fights: s.fights ?? [] };
+    return localStorage.getItem(KEY);
   } catch {
-    // ignore
+    return null;
   }
-  return { attackId: -1, fallId: 0, fights: [] };
 }
 
-export function saveSeen(s: Seen) {
+export function saveSeenAttempt(key: string) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(s));
+    localStorage.setItem(KEY, key);
   } catch {
     // private mode: the recap may show again, harmless
   }

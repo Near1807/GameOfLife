@@ -43,9 +43,20 @@ public class GameContent {
         return rulesHash;
     }
 
-    /** Reads the files again (Settings, "Reload content"). A broken file keeps the old data. */
-    public synchronized void reload() {
-        GameCatalog fresh = GameCatalog.load(root);
+    /**
+     * Reads the files again (Settings, "Reload content"). A broken file keeps the old data and
+     * returns the problem as text (null when all is well). At startup a broken file stops the app.
+     */
+    public synchronized String reload() {
+        GameCatalog fresh;
+        try {
+            fresh = GameCatalog.load(root);
+        } catch (IllegalStateException e) {
+            if (catalog == null) {
+                throw e;
+            }
+            return e.getMessage();
+        }
         try {
             MessageDigest sha = MessageDigest.getInstance("SHA-256");
             sha.update(config.game().toString().getBytes(StandardCharsets.UTF_8));
@@ -61,5 +72,6 @@ public class GameContent {
             throw new IllegalStateException("Cannot read the game data: " + e.getMessage(), e);
         }
         catalog = fresh;
+        return null;
     }
 }

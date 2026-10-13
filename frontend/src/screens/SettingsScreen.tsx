@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { AlertTriangle, Download, FolderSync, HardDrive, Moon, Palette, SlidersHorizontal, Upload } from 'lucide-react';
+import { AlertTriangle, Download, FolderSync, HardDrive, Palette, SlidersHorizontal, Upload } from 'lucide-react';
 import { useEffect } from 'react';
-import type { Catalog, FightView } from '../api';
-import type { Act } from '../types';
+import type { Catalog } from '../api';
 import { api } from '../api';
 import type { Settings } from '../settings';
 import { Card } from '../ui/Card';
@@ -14,8 +13,6 @@ export function SettingsScreen(props: {
   onSettings: (s: Settings) => void;
   refresh: () => void;
   onMessage: (m: string) => void;
-  fight: FightView;
-  act: Act;
   openShop: () => void;
 }) {
   const [pending, setPending] = useState<{ name: string; text: string } | null>(null);
@@ -23,7 +20,6 @@ export function SettingsScreen(props: {
   useEffect(() => {
     api.content().then(setCatalog).catch(() => {});
   }, []);
-  const f = props.fight;
   const s = props.settings;
 
   const row = (key: keyof Settings, label: string, hint: string) => (
@@ -52,18 +48,9 @@ export function SettingsScreen(props: {
             <button className="btn" onClick={props.openShop}><Palette size={16} /> Themes</button>
           </div>
         </Card>
-        <Card title="Pause the fight" icon={Moon}>
-          <p className="small muted" style={{ marginTop: 0 }}>
-            Ill or travelling? A paused day is fully shielded and keeps your streak. {f.pausesLeft} of 7 pause days left in 30 days.
-          </p>
-          {f.pausedToday ? <span className="pill cyan"><Moon size={13} /> Today is paused</span> : (
-            <button className="btn block" disabled={f.pausesLeft === 0} onClick={() => props.act(api.pause())}><Moon size={16} /> Pause today</button>
-          )}
-        </Card>
         <Card title="Content folder" icon={FolderSync}>
           <p className="small muted" style={{ marginTop: 0 }}>
-            {catalog ? `${catalog.bosses.length} bosses, ${catalog.heroes.length} hero looks, ${catalog.regions.length} regions, ${catalog.items.length} shop items.` : '…'}
-            {f.boss > f.bossFiles && ' You have beaten every boss picture: add more boss art to content/enemies.'}
+            {catalog ? `${catalog.heroes.length} hero looks, ${catalog.items.length} shop items. Towers, waves and maps are read again too.` : '…'}
           </p>
           <button className="btn block" onClick={() => api.reloadContent().then((c) => {
             setCatalog(c);

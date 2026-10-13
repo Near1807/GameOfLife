@@ -29,11 +29,10 @@ import java.util.stream.Stream;
  * Folder-driven content (brief 12b). The owner drops files into content/ and the app picks them
  * up at startup or on "reload content", with no code change:
  *
- *   enemies/boss_NN.png   (+ optional boss_NN.json  {"name", "title"})   64x64, or a 4-frame strip
  *   hero/hero_NN.png      (+ optional hero_NN.json  {"name"})            32x32, or a 4-frame strip
- *   regions/region_NN.png (+ optional region_NN.json {"name"})           320x180
- *   items/NAME.png + NAME.json   a shop item (weapon, armor, charm, outfit, skin)   32x32 (outfits: a 4-frame strip)
+ *   items/NAME.png + NAME.json   a cosmetic (outfit, skin)   32x32 (outfits: a 4-frame strip)
  *   themes/NAME.json             a theme (design tokens), optional NAME.png preview
+ *   towers.json, waves.json, maps/map_NN.json   the tower-defense data (read by GameContent)
  *
  * Ordered content is sorted by its number. A bad file never crashes the app: it is skipped and
  * listed in warnings, shown in Settings.
@@ -44,34 +43,31 @@ public class ContentService {
     private static final ObjectMapper JSON = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-    public static final Set<String> KINDS = Set.of("weapon", "armor", "charm", "outfit", "skin", "theme");
+    /** v4: cosmetics only. Power comes from the towers (content/towers.json). */
+    public static final Set<String> KINDS = Set.of("outfit", "skin", "theme");
 
-    /** One ordered picture: boss, hero look or region. file is the URL path, e.g. content/enemies/boss_03.png */
+    /** One ordered picture (a hero look). file is the URL path, e.g. content/hero/hero_02.png */
     public record Art(int number, String name, String title, String file, int frames) {}
-
-    public record Bonus(double damagePct, double maxHp, double reduction) {
-        public static final Bonus NONE = new Bonus(0, 0, 0);
-    }
 
     public record Requirement(String stat, int level) {}
 
-    /** A buyable thing (brief 10). tokens is only used by themes. */
-    public record Item(String id, String name, String kind, String slot, double price, Bonus bonus, String effect,
-                       double value, Requirement requires, String description, String sprite, int frames,
-                       Map<String, String> tokens) {
+    /** A buyable look (brief 10). tokens: CSS design tokens (themes) or a map filter (skins). */
+    public record Item(String id, String name, String kind, String slot, double price, Requirement requires,
+                       String description, String sprite, int frames, Map<String, String> tokens) {
         Item withFrames(int f) {
-            return new Item(id, name, kind, slot, price, bonus, effect, value, requires, description, sprite, f, tokens);
+            return new Item(id, name, kind, slot, price, requires, description, sprite, f, tokens);
         }
     }
 
-    public record Catalog(List<Art> bosses, List<Art> heroes, List<Art> regions, List<Item> items,
-                          List<String> warnings) {}
+    public record Catalog(List<Art> heroes, List<Item> items, List<String> warnings) {}
 
     private final Path root;
+    private final gamelife.game.GameContent game;
     private volatile Catalog catalog;
 
-    public ContentService(@Value("${gamelife.content-dir}") String contentDir) {
+    public ContentService(@Value("${gamelife.content-dir}") String contentDir, gamelife.game.GameContent game) {
         this.root = Path.of(contentDir);
+        this.game = game;
         reload();
     }
 
@@ -82,18 +78,17 @@ public class ContentService {
     /** Scans every folder again (Settings, "reload content"). */
     public synchronized Catalog reload() {
         List<String> warnings = new ArrayList<>();
-        List<Art> bosses = scanOrdered("enemies", "boss", 64, 64, warnings);
         List<Art> heroes = scanOrdered("hero", "hero", 32, 32, warnings);
-        List<Art> regions = scanOrdered("regions", "region", 320, 180, warnings);
         List<Item> items = new ArrayList<>(scanItems(warnings));
         items.addAll(scanThemes(warnings));
-        if (bosses.isEmpty()) {
-            warnings.add("enemies/: no boss_NN.png found. Add at least one boss picture.");
-        }
         if (heroes.isEmpty()) {
             warnings.add("hero/: no hero_NN.png found.");
         }
-        catalog = new Catalog(bosses, heroes, regions, items, warnings);
+        String gameProblem = game.reload();
+        if (gameProblem != null) {
+            warnings.add(gameProblem + " The previous game data is still used.");
+        }
+        catalog = new Catalog(heroes, items, warnings);
         warnings.forEach(w -> log.warn("Content: {}", w));
         return catalog;
     }
@@ -134,7 +129,7 @@ public class ContentService {
             }
             if (size[1] != h || size[0] % w != 0 || size[0] == 0) {
                 warnings.add(folder + "/" + fn + ": wrong size " + size[0] + "x" + size[1] + ", expected " + w + "x" + h
-                        + (w == 320 ? "" : " (or a strip of " + w + "x" + h + " frames)"));
+                        + " (or a strip of " + w + "x" + h + " frames)");
                 continue;
             }
             JsonNode side = sidecar(file, folder, warnings);
@@ -255,14 +250,11 @@ public class ContentService {
             warnings.add(where + ": price must be a number >= 0");
             return null;
         }
-        JsonNode b = n.path("bonus");
-        Bonus bonus = new Bonus(b.path("damagePct").asDouble(0), b.path("maxHp").asDouble(0), b.path("reduction").asDouble(0));
         JsonNode r = n.path("requires");
         Requirement req = r.isObject() && r.has("stat") ? new Requirement(r.path("stat").asText(), r.path("level").asInt(1)) : null;
         Map<String, String> tokens = new LinkedHashMap<>();
         n.path("tokens").fields().forEachRemaining(e -> tokens.put(e.getKey(), e.getValue().asText()));
-        return new Item(id, name, kind, text(n, "slot", kind), price, bonus, text(n, "effect", null),
-                n.path("value").asDouble(0), req, text(n, "description", ""), sprite, 1, tokens);
+        return new Item(id, name, kind, text(n, "slot", kind), price, req, text(n, "description", ""), sprite, 1, tokens);
     }
 
     // ---------------------------------------------------------------- helpers
@@ -309,19 +301,7 @@ public class ContentService {
         }
     }
 
-    // ---------------------------------------------------------------- ladder helpers
-
-    /**
-     * Boss picture for boss number k (1-based, counting all bosses fought in this cycle). Past the
-     * last file it loops back to the first, as a "stronger variant" (brief 12b).
-     */
-    public Art bossArt(int k) {
-        List<Art> b = catalog.bosses();
-        if (b.isEmpty()) {
-            return new Art(k, "Boss " + k, "", "", 1);
-        }
-        return b.get((k - 1) % b.size());
-    }
+    // ---------------------------------------------------------------- hero look
 
     /** Hero look for an overall level: changes every n levels, capped at the last file. */
     public Art heroArt(int overallLevel, int everyN) {
@@ -331,14 +311,5 @@ public class ContentService {
         }
         int index = Math.min(h.size() - 1, (overallLevel - 1) / Math.max(1, everyN));
         return h.get(index);
-    }
-
-    /** Region background for boss number k: changes every n bosses, looping over the files. */
-    public Art regionArt(int k, int everyN) {
-        List<Art> r = catalog.regions();
-        if (r.isEmpty()) {
-            return null;
-        }
-        return r.get(((k - 1) / Math.max(1, everyN)) % r.size());
     }
 }

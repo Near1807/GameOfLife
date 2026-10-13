@@ -37,75 +37,22 @@ export interface GameState {
   balance: number;
   xpToday: number;
   streak: StreakInfo;
-  multipliers: { streak: number; weapon: number; ascension: number; comeback: number };
+  /** coins = final XP x income (Markets and Social), see DefenseView.incomeMultiplier */
+  multipliers: { streak: number; comeback: number };
   statXp: Record<string, number>;
-  weaponLevel: number;
-  nextUpgradeCost: number;
-  fight: FightView;
   loadout: Loadout;
   look: Look;
   chain: { valid: boolean; brokenAtId: number; message: string };
   log: LedgerEvent[];
 }
 
-export interface Attack {
-  id: number;
-  date: string;
-  atk: number;
-  damage: number;
-  blocked: number;
-  heal: number;
-  shield: number;
-  protectedDay: boolean;
-}
-
-/** The losable boss fight (brief 9.1), as computed by the backend from the ledger. */
-export interface FightView {
-  fightId: string;
-  ascensions: number;
-  boss: number;
-  bossName: string;
-  bossTitle: string;
-  bossSprite: string;
-  bossFrames: number;
-  variant: boolean;
-  bossHp: number;
-  bossMaxHp: number;
-  bossAtk: number;
-  heroHp: number;
-  heroMaxHp: number;
-  armorReduction: number;
-  todayXp: number;
-  dailyGoal: number;
-  shieldToday: number;
-  protectedToday: boolean;
-  expectedHit: number;
-  defeatsByThisBoss: number;
-  kills: number;
-  falls: number;
-  ascendReady: boolean;
-  bossFiles: number;
-  region: string | null;
-  heroSprite: string;
-  heroFrames: number;
-  defeatMode: string;
-  killReward: number;
-  pausedToday: boolean;
-  pausesLeft: number;
-  recentAttacks: Attack[];
-  recentFalls: number[];
-  map: { number: number; name: string; sprite: string; frames: number; status: 'CLEARED' | 'CURRENT' | 'LOCKED'; defeats: number }[];
-}
-
+/** A cosmetic (v4: looks only). tokens: CSS design tokens (themes) or { filter } for map skins. */
 export interface Item {
   id: string;
   name: string;
-  kind: 'weapon' | 'armor' | 'charm' | 'outfit' | 'skin' | 'theme';
+  kind: 'outfit' | 'skin' | 'theme';
   slot: string;
   price: number;
-  bonus: { damagePct: number; maxHp: number; reduction: number };
-  effect: string | null;
-  value: number;
   requires: { stat: string; level: number } | null;
   description: string;
   sprite: string | null;
@@ -114,11 +61,8 @@ export interface Item {
 }
 
 export interface Loadout {
-  weaponLevel: number;
-  armorLevel: number;
   owned: string[];
   equipped: Record<string, string>;
-  charms: string[];
 }
 
 export interface Look {
@@ -126,8 +70,7 @@ export interface Look {
   themeTokens: Record<string, string>;
   heroSprite: string;
   heroFrames: number;
-  arenaFilter: string | null;
-  worn: Item[];
+  mapFilter: string | null;
 }
 
 export interface ShopItem {
@@ -137,43 +80,30 @@ export interface ShopItem {
   effectText: string;
 }
 
-export interface Upgrade {
-  slot: 'weapon' | 'armor';
-  level: number;
-  cost: number;
-  status: 'AFFORDABLE' | 'TOO_EXPENSIVE';
-  effectText: string;
-}
-
 export interface ShopView {
   balance: number;
-  averageDailyXp: number;
-  weapon: Upgrade;
-  armor: Upgrade;
   items: ShopItem[];
-  maxCharms: number;
 }
 
 export interface Catalog {
-  bosses: { number: number; name: string; title: string; file: string; frames: number }[];
   heroes: { number: number; name: string; file: string; frames: number }[];
-  regions: { number: number; name: string; file: string }[];
   items: Item[];
   warnings: string[];
 }
 
-/** Calendar-week report (brief 9.1). It does not control the boss. */
+/** Calendar-week report (v4 brief 4): real life and the map. */
 export interface WeekReview {
   weekStart: string;
   previousWeek: string | null;
   nextWeek: string | null;
   currentWeek: boolean;
-  damageDealt: number;
-  damageTaken: number;
-  damageBlocked: number;
-  falls: number;
-  bossesDefeated: number;
-  bossNames: string[];
+  xp: number;
+  wavesCleared: number;
+  wavesFailed: number;
+  furthestWave: number;
+  coinsEarned: number;
+  coinsSpent: number;
+  towersBuilt: number;
   days: { date: string; xp: number; counted: boolean; rest: boolean; future: boolean }[];
   statXp: Record<string, number>;
   tasksDone: number;
@@ -196,7 +126,7 @@ export interface Dashboard {
   bestStreak: number;
   currentStreak: number;
   countedDaysAllTime: number;
-  bossesDefeated: number;
+  furthestWave: number;
 }
 
 export interface AchievementStatus {
@@ -377,12 +307,8 @@ export const api = {
   character: () => request<Character>('GET', '/api/character'),
   review: (week?: string) => request<WeekReview>('GET', '/api/review' + (week ? `?week=${week}` : '')),
   dashboard: (days = 30) => request<Dashboard>('GET', `/api/dashboard?days=${days}`),
-  fight: () => request<FightView>('GET', '/api/fight'),
-  pause: () => request<ActionResult>('POST', '/api/fight/pause', {}),
-  ascend: () => request<ActionResult>('POST', '/api/fight/ascend'),
   shop: () => request<ShopView>('GET', '/api/shop'),
   buy: (itemId: string) => request<ActionResult>('POST', '/api/shop/buy', { itemId, confirm: true }),
-  upgrade: (slot: 'weapon' | 'armor') => request<ActionResult>('POST', '/api/shop/upgrade', { slot, confirm: true }),
   equip: (itemId: string, on: boolean) => request<ActionResult>('POST', '/api/shop/equip', { itemId, on }),
   content: () => request<Catalog>('GET', '/api/content'),
   achievements: () => request<AchievementStatus[]>('GET', '/api/achievements'),

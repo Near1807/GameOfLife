@@ -3,9 +3,9 @@
 // Run from the repo root:  node content/tools/make-sprites.mjs   (or: npm run sprites)
 //
 //   content/hero/hero_NN.png        hero looks (32x32 frames, 4-frame idle strip)
-//   content/enemies/boss_NN.png     bosses (64x64 frames, 4-frame idle strip) + boss_NN.json
-//   content/regions/region_NN.png   arena backgrounds (320x180) + region_NN.json
 //   content/items/NAME.png          shop item icons (32x32); their NAME.json is hand-written
+//
+// v4: the tower-defense map, towers and enemies are vector shapes drawn by the app, not sprites.
 //
 // Contract (brief 12): only the 32 palette colours plus full transparency, no anti-aliasing,
 // one horizontal strip per animation (idle = 4 frames). Your own pictures replace these files:
@@ -286,140 +286,8 @@ function heroFrames() {
   return [f0, f1, f2, f3];
 }
 
-// ================================================================ BOSSES (64x64)
-// Three body designs, recoloured with palette ramps into ten bosses.
-// ramp: { out, dark, mid, light, eye, accent }
-
-function beetle(r) {
-  const k = new Canvas(64, 64);
-  // legs (left side, mirrored later)
-  k.line(18, 36, 6, 30, r.dark, 2); k.line(6, 30, 3, 40, r.dark, 2);
-  k.line(17, 42, 5, 44, r.dark, 2); k.line(5, 44, 4, 53, r.dark, 2);
-  k.line(19, 48, 9, 55, r.dark, 2); k.line(9, 55, 10, 61, r.dark, 2);
-  // antennae
-  k.line(27, 14, 17, 4, r.dark, 1); k.line(17, 4, 12, 6, r.dark, 1);
-  k.ellipse(12, 6, 1.6, 1.6, r.accent);
-  // shell: dark base, mid body, light highlight (top-left light)
-  k.ellipse(32, 40, 18, 17, r.dark);
-  k.ellipse(31, 38, 16, 15, r.mid, true);
-  k.ellipse(24, 32, 6, 5, r.light, true);
-  // shell split and circuit lines
-  k.line(32, 25, 32, 56, r.out);
-  k.line(31, 25, 31, 56, r.dark);
-  k.line(20, 40, 27, 40, r.accent); k.set(27, 41, r.accent); k.line(27, 42, 27, 46, r.accent); k.ellipse(27, 47, 1, 1, r.accent);
-  k.line(17, 47, 22, 47, r.accent); k.ellipse(22, 48, 0.8, 0.8, r.accent);
-  // head
-  k.ellipse(32, 21, 12, 8, r.dark);
-  k.ellipse(31, 20, 10, 6, r.mid, true);
-  // eyes and mandibles
-  k.ellipse(26, 21, 3, 2.4, r.eye);
-  k.set(25, 20, P.white); k.set(26, 20, P.white);
-  k.poly([[25, 27], [29, 27], [28, 32], [26, 31]], r.light);
-  k.set(27, 31, r.out);
-  k.mirror();
-  k.outline(r.out);
-  return k;
-}
-
-function wraith(r) {
-  const k = new Canvas(64, 64);
-  // tattered robe
-  k.poly([[32, 10], [14, 26], [10, 52], [14, 58], [18, 52], [22, 60], [27, 53], [32, 61], [32, 10]], r.dark);
-  k.poly([[32, 12], [17, 27], [14, 50], [18, 50], [22, 56], [27, 50], [32, 56]], r.mid, true);
-  k.poly([[30, 14], [20, 26], [18, 40], [22, 30]], r.light, true);
-  // claws reaching out
-  k.line(16, 34, 6, 40, r.dark, 2);
-  k.line(6, 40, 3, 37, r.light); k.line(6, 40, 3, 42, r.light); k.line(7, 41, 5, 45, r.light);
-  // hood opening: void face with glowing eyes
-  k.ellipse(32, 25, 9, 10, P.black);
-  k.ellipse(32, 25, 9, 10, r.out, true);
-  k.ellipse(32, 26, 7, 8, P.black, true);
-  k.poly([[25, 24], [30, 25], [29, 27], [25, 26]], r.eye);
-  k.set(27, 25, P.white);
-  // floating orbs
-  k.ellipse(8, 18, 2, 2, r.accent); k.set(7, 17, P.white);
-  k.ellipse(12, 10, 1.2, 1.2, r.accent);
-  // chest rune
-  k.line(32, 40, 28, 44, r.accent); k.line(28, 44, 32, 48, r.accent);
-  k.mirror();
-  k.outline(r.out);
-  return k;
-}
-
-function core(r) {
-  const k = new Canvas(64, 64);
-  // spikes around the ring (left half; mirrored)
-  for (const a of [-160, -125, -90, 160, 125]) {
-    const rad = (a * Math.PI) / 180;
-    const cx = 32 + Math.cos(rad) * 22;
-    const cy = 30 + Math.sin(rad) * 22;
-    const px = 32 + Math.cos(rad) * 29;
-    const py = 30 + Math.sin(rad) * 29;
-    const nx = -Math.sin(rad) * 4;
-    const ny = Math.cos(rad) * 4;
-    k.poly([[cx + nx, cy + ny], [px, py], [cx - nx, cy - ny]], r.dark);
-  }
-  // hanging cables
-  k.line(24, 48, 22, 58, r.dark, 2); k.line(22, 58, 25, 62, r.dark);
-  k.line(29, 50, 29, 60, r.dark);
-  k.ellipse(25, 62, 1, 1, r.accent);
-  // outer ring, plating, iris, pupil
-  k.ellipse(32, 30, 23, 23, r.dark);
-  k.ellipse(31, 29, 21, 21, r.mid, true);
-  k.ellipse(24, 21, 9, 7, r.light, true);
-  k.ellipse(32, 30, 15, 15, r.out);
-  k.ellipse(32, 30, 13.5, 13.5, r.eye);
-  k.ellipse(30, 28, 9, 9, r.accent, true);
-  k.ellipse(32, 30, 5.5, 5.5, P.black);
-  k.ellipse(28, 26, 2, 2, P.white);
-  // ring bolts
-  for (const [x, y] of [[13, 30], [18, 16], [18, 44]]) k.ellipse(x, y, 1.2, 1.2, r.light);
-  k.mirror();
-  // keep the eye highlight on the left only (asymmetric reflection)
-  k.ellipse(36, 26, 2, 2, r.accent, true);
-  k.outline(r.out);
-  return k;
-}
-
-const RAMPS = {
-  green: { out: P.ink, dark: P.g0, mid: P.g1, light: P.g2, eye: P.r2, accent: P.c3 },
-  violet: { out: P.ink, dark: P.v0, mid: P.v1, light: P.v2, eye: P.g3, accent: P.c3 },
-  cyan: { out: P.ink, dark: P.c0, mid: P.c1, light: P.c2, eye: P.o3, accent: P.c4 },
-  red: { out: P.ink, dark: P.r0, mid: P.r1, light: P.r2, eye: P.o3, accent: P.c3 },
-  ember: { out: P.ink, dark: P.o0, mid: P.o1, light: P.o2, eye: P.c3, accent: P.o4 },
-  ghost: { out: P.ink, dark: P.steel, mid: P.iron, light: P.silver, eye: P.r2, accent: P.c3 },
-  steel: { out: P.ink, dark: P.slate, mid: P.steel, light: P.iron, eye: P.r2, accent: P.r2 },
-  gold: { out: P.ink, dark: P.o0, mid: P.o1, light: P.o3, eye: P.r2, accent: P.o4 },
-  teal: { out: P.ink, dark: P.c0, mid: P.g1, light: P.g2, eye: P.v2, accent: P.g4 },
-  entropy: { out: P.black, dark: P.r0, mid: P.v0, light: P.v1, eye: P.o3, accent: P.r2 },
-};
-
-/** Idle: 4 frames at 6 fps. Bob up and down, the eyes and accents pulse. */
-function bossFrames(draw, ramp) {
-  const base = draw(ramp);
-  const pulse = base.clone();
-  pulse.swap(ramp.accent, P.white);
-  const up = base.shiftDown(-1);
-  const upPulse = pulse.shiftDown(-1);
-  return [base, upPulse, up, pulse];
-}
-
-// The ten bosses, in ladder order. name and title go to the sidecar boss_NN.json.
-const BOSSES = [
-  [beetle, RAMPS.green, 'Bug Queen', 'Mother of all regressions'],
-  [wraith, RAMPS.violet, 'Doomscroll Wraith', 'It feeds on lost evenings'],
-  [core, RAMPS.cyan, 'Null Pointer', 'Stares into nothing, and nothing stares back'],
-  [beetle, RAMPS.red, 'Merge Conflict', 'Two truths, one file'],
-  [wraith, RAMPS.ember, 'Burnout', 'Burns bright, leaves ash'],
-  [core, RAMPS.red, 'Kernel Panic', 'The core that halts everything'],
-  [beetle, RAMPS.teal, 'Infinite Loop', 'Same day, again and again'],
-  [wraith, RAMPS.ghost, 'Distraction Phantom', 'Just one more notification'],
-  [core, RAMPS.gold, 'Overclock', 'Faster, hotter, until it breaks'],
-  [wraith, RAMPS.entropy, 'Entropy', 'The last boss. Everything drifts toward it'],
-];
-
 // ================================================================ HERO LOOKS
-// The look changes every fight.heroEveryNLevels overall levels: same body, new colours.
+// The look changes every character.heroEveryNLevels overall levels: same body, new colours.
 
 function recolor(frames, map) {
   return frames.map((f) => {
@@ -438,89 +306,6 @@ const OUTFITS = [
   ['outfit_void_walker', { [P.v0]: P.black, [P.v1]: P.v0, [P.v2]: P.v1, [P.o2]: P.c2, [P.o3]: P.c3, [P.skin]: P.silver, [P.skinD]: P.iron }],
 ];
 
-// ================================================================ REGIONS (320x180)
-
-/** Small deterministic random generator, so the backgrounds are the same on every run. */
-function rng(seed) {
-  let s = seed >>> 0;
-  return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
-}
-
-/** Sky in horizontal bands with a checkerboard dither row between bands (no blending). */
-function sky(k, bands, height) {
-  const step = height / bands.length;
-  for (let y = 0; y < height; y++) {
-    const i = Math.min(bands.length - 1, Math.floor(y / step));
-    const edge = (y % step) > step - 3 && i + 1 < bands.length;
-    for (let x = 0; x < k.w; x++) k.set(x, y, edge && (x + y) % 2 === 0 ? bands[i + 1] : bands[i]);
-  }
-}
-
-function region(def) {
-  const k = new Canvas(320, 180);
-  const r = rng(def.seed);
-  sky(k, def.sky, 150);
-  for (let i = 0; i < def.stars; i++) k.set(Math.floor(r() * 320), Math.floor(r() * 90), r() < 0.2 ? P.white : def.star);
-  if (def.moon) {
-    k.ellipse(def.moon[0], def.moon[1], def.moon[2], def.moon[2], def.moon[3]);
-    k.ellipse(def.moon[0] - 3, def.moon[1] - 3, def.moon[2] * 0.6, def.moon[2] * 0.6, def.moon[4], true);
-  }
-  def.far(k, r);
-  // ground: a lit edge, then darker layers and a few floor lines
-  k.rect(0, 148, 319, 179, def.ground[0]);
-  k.rect(0, 148, 319, 149, def.ground[1]);
-  for (let y = 156; y < 180; y += 7) for (let x = 0; x < 320; x++) if ((x + y) % 4 === 0) k.set(x, y, def.ground[2]);
-  return k;
-}
-
-const REGIONS = [
-  { name: 'Neon City', seed: 7, sky: [P.black, P.night, P.v0, P.v0, P.v1], stars: 90, star: P.c3,
-    moon: [262, 34, 14, P.mist, P.white], ground: [P.night, P.c2, P.c0],
-    far: (k, r) => {
-      for (let x = 0; x < 320;) {
-        const w = 14 + Math.floor(r() * 22), h = 30 + Math.floor(r() * 70);
-        k.rect(x, 148 - h, x + w - 2, 147, r() < 0.5 ? P.slate : P.night);
-        for (let wy = 148 - h + 4; wy < 144; wy += 6) for (let wx = x + 3; wx < x + w - 4; wx += 4) if (r() < 0.35) k.set(wx, wy, r() < 0.5 ? P.c3 : P.v2);
-        x += w;
-      }
-    } },
-  { name: 'Data Forest', seed: 11, sky: [P.night, P.c0, P.c0, P.g0, P.g1], stars: 40, star: P.g4,
-    moon: [60, 30, 10, P.g4, P.white], ground: [P.g0, P.g2, P.g1],
-    far: (k, r) => {
-      for (let i = 0; i < 26; i++) {
-        const x = Math.floor(r() * 330) - 5, h = 40 + Math.floor(r() * 60), w = 10 + Math.floor(r() * 10);
-        k.poly([[x, 148 - h], [x - w, 148], [x + w, 148]], r() < 0.5 ? P.g0 : P.c0);
-        k.line(x, 148 - h + 6, x, 148, P.night);
-      }
-      for (let i = 0; i < 40; i++) k.set(Math.floor(r() * 320), 90 + Math.floor(r() * 55), P.g4); // fireflies
-    } },
-  { name: 'Frozen Server Farm', seed: 23, sky: [P.night, P.c0, P.c1, P.c1, P.c2], stars: 70, star: P.white,
-    moon: null, ground: [P.steel, P.mist, P.iron],
-    far: (k, r) => {
-      for (let x = 6; x < 320; x += 34) {
-        const h = 60 + Math.floor(r() * 30);
-        k.rect(x, 148 - h, x + 24, 147, P.slate);
-        k.rect(x + 1, 148 - h + 1, x + 23, 146, P.steel);
-        for (let y = 148 - h + 5; y < 144; y += 5) {
-          k.line(x + 3, y, x + 21, y, P.slate);
-          k.set(x + 19, y - 2, r() < 0.5 ? P.g3 : P.c3);
-          if (r() < 0.3) k.set(x + 16, y - 2, P.r2);
-        }
-      }
-      for (let i = 0; i < 120; i++) k.set(Math.floor(r() * 320), Math.floor(r() * 148), P.white); // snow
-    } },
-  { name: 'Ember Wastes', seed: 31, sky: [P.night, P.r0, P.r0, P.r1, P.o1], stars: 20, star: P.o3,
-    moon: [240, 70, 24, P.o3, P.o4], ground: [P.o0, P.o2, P.r0],
-    far: (k, r) => {
-      let y = 110;
-      const pts = [[0, 148]];
-      for (let x = 0; x <= 320; x += 16) { y = Math.max(70, Math.min(135, y + Math.floor(r() * 40) - 20)); pts.push([x, y]); }
-      pts.push([320, 148]);
-      k.poly(pts, P.r0);
-      for (let i = 0; i < 60; i++) k.set(Math.floor(r() * 320), Math.floor(r() * 140), r() < 0.5 ? P.o3 : P.o2); // embers
-    } },
-];
-
 // ================================================================ ITEM ICONS (32x32)
 
 function icon(draw) {
@@ -530,15 +315,6 @@ function icon(draw) {
   return k;
 }
 const ICONS = {
-  weapon_plasma_staff: (k) => { k.line(6, 28, 22, 10, P.o1, 2); k.ellipse(24, 8, 5, 5, P.r2); k.ellipse(23, 7, 2, 2, P.o4); },
-  weapon_arc_blade: (k) => { k.poly([[8, 22], [25, 4], [28, 7], [11, 25]], P.c3); k.line(10, 22, 26, 6, P.c4); k.rect(5, 23, 10, 25, P.o2); k.line(4, 28, 8, 24, P.o1, 2); },
-  armor_circuit_vest: (k) => { k.poly([[8, 6], [13, 6], [16, 10], [19, 6], [24, 6], [27, 12], [25, 28], [7, 28], [5, 12]], P.v1); k.line(16, 11, 16, 27, P.c3); k.line(10, 16, 14, 16, P.c3); k.line(18, 20, 22, 20, P.c3); },
-  armor_aegis_plate: (k) => { k.poly([[6, 5], [26, 5], [26, 16], [16, 28], [6, 16]], P.o2); k.poly([[8, 7], [24, 7], [24, 15], [16, 25], [8, 15]], P.silver); k.line(16, 8, 16, 23, P.mist); k.line(9, 13, 23, 13, P.mist); },
-  charm_ice_crystal: (k) => { k.poly([[16, 3], [25, 16], [16, 29], [7, 16]], P.c2); k.poly([[16, 6], [20, 16], [16, 26]], P.c4); },
-  charm_phoenix_feather: (k) => { k.ellipse(17, 14, 6, 11, P.r2); k.ellipse(17, 12, 3, 8, P.o3, true); k.line(10, 29, 17, 16, P.o1, 2); },
-  charm_moon_amulet: (k) => { k.line(8, 3, 16, 12, P.o2); k.line(24, 3, 16, 12, P.o2); k.ellipse(16, 20, 8, 8, P.mist); k.ellipse(19, 18, 7, 7, -1, true); },
-  charm_aegis_rune: (k) => { k.poly([[16, 3], [27, 9], [27, 23], [16, 29], [5, 23], [5, 9]], P.v1); k.line(16, 8, 16, 24, P.c3); k.line(11, 12, 21, 20, P.c3); k.line(21, 12, 11, 20, P.c3); },
-  charm_focus_lens: (k) => { k.ellipse(14, 14, 10, 10, P.o1); k.ellipse(14, 14, 8, 8, P.c2); k.ellipse(11, 11, 3, 3, P.c4); k.line(21, 21, 28, 28, P.o1, 2); },
   skin_aurora: (k) => { k.rect(3, 3, 28, 28, P.night); k.rect(3, 3, 28, 12, P.g1); k.rect(3, 13, 28, 18, P.c1); for (let x = 3; x < 29; x += 2) k.set(x, 12, P.g4); k.rect(3, 22, 28, 28, P.g0); },
   skin_ember_night: (k) => { k.rect(3, 3, 28, 28, P.r0); k.ellipse(20, 12, 5, 5, P.o3); k.poly([[3, 28], [3, 18], [10, 13], [17, 20], [24, 14], [28, 19], [28, 28]], P.night); },
 };
@@ -555,14 +331,6 @@ const heroBaseFrames = heroFrames();
 HEROES.forEach(([name, map], i) => {
   write(`hero/hero_${nn(i)}.png`, sheet(recolor(heroBaseFrames, map)));
   writeJson(`hero/hero_${nn(i)}.json`, { name });
-});
-BOSSES.forEach(([draw, ramp, name, title], i) => {
-  write(`enemies/boss_${nn(i)}.png`, sheet(bossFrames(draw, ramp)));
-  writeJson(`enemies/boss_${nn(i)}.json`, { name, title });
-});
-REGIONS.forEach((def, i) => {
-  write(`regions/region_${nn(i)}.png`, region(def).px);
-  writeJson(`regions/region_${nn(i)}.json`, { name: def.name });
 });
 for (const [name, draw] of Object.entries(ICONS)) write(`items/${name}.png`, icon(draw).px);
 for (const [name, map] of OUTFITS) write(`items/${name}.png`, sheet(recolor(heroBaseFrames, map)));

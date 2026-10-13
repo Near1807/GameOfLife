@@ -1,6 +1,32 @@
 # Demo
 
-## Version 3 (losable fight, shop, content folder)
+## Version 4 (tower defense)
+
+Use a throwaway database (`--gamelife.db-path=../data/test.db`, see the README).
+
+1. **Earn:** in Quests, add `Big day` with `600` minutes and tags INT + STR, tick it: 660 coins,
+   Intellect and Strength reach level 3.
+2. **Build (2 taps):** on Home, tap a `+` spot, then Archer. Tap another spot: the Cannon and the
+   Mage are open now (Strength 3, Intellect 3); Tesla still says "Needs Intellect 5".
+3. **Upgrade (2 taps):** tap the Archer, then Sniper. Rapid now says "Locked: you chose the other
+   path". The tower gets a pip.
+4. **Sell (2 taps):** tap a tower, Sell, "Tap again to sell": you get back exactly what you paid.
+5. **Spots:** tap a dashed LOCK spot: unlock for 150 (then 218, 315...).
+6. **Run now, Watch:** tap Run now, then Watch last attempt. Enemies walk the path, towers fire,
+   rings and beams show splash and chain lightning. x1, x3, x10 change the speed. The end card shows
+   the same result as the server.
+7. **Market:** build a Market: the "Income bonus" chip goes to x1.06. Tick a quest: the coins in
+   the log are 6% more than the XP.
+8. **While you were away:** restart with `--gamelife.clock-offset-hours=12`. Home says which waves
+   were cleared; after a failure the status says "Stuck" until the build changes.
+9. **Hero:** each stat shows what it boosts in the game and which towers it unlocks.
+10. **Review:** waves cleared, furthest wave, towers built, coins earned and spent this week.
+11. **Shop (tap the coins):** outfits, map skins and themes only.
+12. **Content:** edit a number in `content/towers.json`, Settings → Reload content: the change is
+    live; a stuck wave is tried again because the rules changed.
+
+
+## Version 3 (losable fight, shop, content folder; replaced by version 4)
 
 Use a throwaway database (`--gamelife.db-path=../data/test.db`, see the README).
 

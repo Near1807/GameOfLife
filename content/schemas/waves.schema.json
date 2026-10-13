@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Enemies and waves (content/waves.json)",
+  "type": "object",
+  "required": [
+    "enemies",
+    "groups",
+    "groupPause"
+  ],
+  "properties": {
+    "contractVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "groupPause": {
+      "type": "number",
+      "minimum": 0
+    },
+    "enemies": {
+      "type": "object"
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "type",
+          "from",
+          "base",
+          "per",
+          "gap"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "from": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "parity": {
+            "type": "string",
+            "enum": [
+              "odd",
+              "even"
+            ]
+          },
+          "every": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "base": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "per": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "gap": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  }
+}

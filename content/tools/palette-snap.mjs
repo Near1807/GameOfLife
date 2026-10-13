@@ -1,7 +1,7 @@
 // Palette snap (brief 12): converts any PNG to the shared 32-colour palette, so a generated or
 // drawn picture drops into the game.
 //
-//   node content/tools/palette-snap.mjs input.png output.png [--kind boss|hero|region|item]
+//   node content/tools/palette-snap.mjs input.png output.png [--kind hero|item]
 //
 // Every pixel becomes the nearest palette colour (by perceived distance); pixels less than half
 // opaque become fully transparent, the others fully opaque. It does NOT resize: it reports wrong
@@ -12,7 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { decodePng, encodePng } from './png.mjs';
 
-const SIZES = { boss: [64, 64], hero: [32, 32], item: [32, 32], region: [320, 180] };
+const SIZES = { hero: [32, 32], item: [32, 32] };
 
 export function snapToPalette(img, paletteHex) {
   const pal = paletteHex.map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
@@ -38,15 +38,13 @@ export function snapToPalette(img, paletteHex) {
 export function sizeProblem(kind, width, height) {
   const s = SIZES[kind];
   if (!s) return null;
-  const ok = height === s[1] && (kind === 'region' ? width === s[0] : width % s[0] === 0);
-  return ok ? null : `size ${width}x${height}, a ${kind} must be ${s[0]}x${s[1]}${kind === 'region' ? '' : ' (or a strip of such frames)'}`;
+  const ok = height === s[1] && width % s[0] === 0 && width > 0;
+  return ok ? null : `size ${width}x${height}, a ${kind} must be ${s[0]}x${s[1]} (or a strip of such frames)`;
 }
 
 function guessKind(file) {
   const n = path.basename(file);
-  if (n.startsWith('boss_')) return 'boss';
   if (n.startsWith('hero_') || n.startsWith('outfit_')) return 'hero';
-  if (n.startsWith('region_')) return 'region';
   return 'item';
 }
 
@@ -54,7 +52,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const [input, output] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
   const kindArg = process.argv.indexOf('--kind');
   if (!input || !output) {
-    console.error('usage: node content/tools/palette-snap.mjs input.png output.png [--kind boss|hero|region|item]');
+    console.error('usage: node content/tools/palette-snap.mjs input.png output.png [--kind hero|item]');
     process.exit(2);
   }
   const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');

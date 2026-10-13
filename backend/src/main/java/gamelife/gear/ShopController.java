@@ -17,8 +17,6 @@ public class ShopController {
     /** confirm must be true: the UI sends it on the second tap (brief 9.3). */
     public record BuyInput(String itemId, boolean confirm) {}
 
-    public record UpgradeInput(String slot, boolean confirm) {}
-
     public record EquipInput(String itemId, boolean on) {}
 
     @GetMapping
@@ -34,11 +32,6 @@ public class ShopController {
     @PostMapping("/buy")
     public ActionResult buy(@RequestBody BuyInput in) {
         return shop.buy(in.itemId(), in.confirm());
-    }
-
-    @PostMapping("/upgrade")
-    public ActionResult upgrade(@RequestBody UpgradeInput in) {
-        return shop.upgrade(in.slot(), in.confirm());
     }
 
     @PostMapping("/equip")

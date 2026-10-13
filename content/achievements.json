@@ -153,93 +153,103 @@
       }
     },
     {
-      "id": "boss_1",
-      "name": "Bug Squasher",
-      "description": "Defeat your first boss.",
+      "id": "wave_10",
+      "name": "First Boss Down",
+      "description": "Clear wave 10, the first boss wave.",
       "icon": "Skull",
       "rule": {
-        "fact": "kills",
-        "min": 1
-      }
-    },
-    {
-      "id": "boss_5",
-      "name": "Boss Hunter",
-      "description": "Defeat 5 bosses.",
-      "icon": "Skull",
-      "rule": {
-        "fact": "kills",
-        "min": 5
-      }
-    },
-    {
-      "id": "boss_10",
-      "name": "Campaign Hero",
-      "description": "Defeat 10 bosses.",
-      "icon": "Crown",
-      "rule": {
-        "fact": "kills",
+        "fact": "furthestWave",
         "min": 10
       }
     },
     {
-      "id": "ascend_1",
-      "name": "New Game+",
-      "description": "Ascend once.",
+      "id": "wave_25",
+      "name": "Holding the Line",
+      "description": "Clear wave 25.",
+      "icon": "Castle",
+      "rule": {
+        "fact": "furthestWave",
+        "min": 25
+      }
+    },
+    {
+      "id": "wave_50",
+      "name": "Fortress",
+      "description": "Clear wave 50.",
       "icon": "Crown",
       "rule": {
-        "fact": "ascensions",
-        "min": 1
-      }
-    },
-    {
-      "id": "fall_1",
-      "name": "Got Back Up",
-      "description": "Fall once, and keep playing.",
-      "icon": "HeartPulse",
-      "rule": {
-        "fact": "falls",
-        "min": 1
-      }
-    },
-    {
-      "id": "shield_7",
-      "name": "Iron Wall",
-      "description": "7 fully shielded days.",
-      "icon": "Shield",
-      "rule": {
-        "fact": "fullShieldDays",
-        "min": 7
-      }
-    },
-    {
-      "id": "shield_50",
-      "name": "Fortress",
-      "description": "50 fully shielded days.",
-      "icon": "Shield",
-      "rule": {
-        "fact": "fullShieldDays",
+        "fact": "furthestWave",
         "min": 50
       }
     },
     {
-      "id": "weapon_5",
-      "name": "Sharpened",
-      "description": "Raise your weapon to level 5.",
-      "icon": "Sword",
+      "id": "wave_100",
+      "name": "Hundred Waves",
+      "description": "Clear wave 100.",
+      "icon": "Crown",
       "rule": {
-        "fact": "weaponLevel",
+        "fact": "furthestWave",
+        "min": 100
+      }
+    },
+    {
+      "id": "got_back_up",
+      "name": "Got Back Up",
+      "description": "Clear a wave you had failed before.",
+      "icon": "HeartPulse",
+      "rule": {
+        "fact": "retriedClears",
+        "min": 1
+      }
+    },
+    {
+      "id": "first_tower",
+      "name": "Foundation",
+      "description": "Build your first tower.",
+      "icon": "Castle",
+      "rule": {
+        "fact": "towersBuilt",
+        "min": 1
+      }
+    },
+    {
+      "id": "spots_5",
+      "name": "Land Grab",
+      "description": "Unlock 5 tower spots.",
+      "icon": "MapPin",
+      "rule": {
+        "fact": "spotsUnlocked",
         "min": 5
       }
     },
     {
-      "id": "armor_3",
-      "name": "Plated",
-      "description": "Raise your armour to level 3.",
+      "id": "max_tier",
+      "name": "Mastery",
+      "description": "Take a tower to the third tier of a path.",
+      "icon": "Sword",
+      "rule": {
+        "fact": "maxTier",
+        "min": 3
+      }
+    },
+    {
+      "id": "arsenal",
+      "name": "Arsenal",
+      "description": "Build 5 different kinds of tower.",
       "icon": "Shield",
       "rule": {
-        "fact": "armorLevel",
-        "min": 3
+        "fact": "towerTypes",
+        "min": 5
+      }
+    },
+    {
+      "id": "merchant",
+      "name": "Merchant",
+      "description": "Build a Market: your real work pays more.",
+      "icon": "Coins",
+      "rule": {
+        "fact": "marketsBuilt",
+        "min": 1
       }
     },
     {

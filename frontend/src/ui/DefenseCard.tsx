@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Castle, Coins, Eye, Heart, Lock, Play, RotateCcw, TrendingUp, X } from 'lucide-react';
 import { api, type DefenseView, type SpotView, type Watch } from '../api';
 import type { Act } from '../types';
+import { loadSeenAttempt, saveSeenAttempt } from '../seen';
 import { Card } from './Card';
 import { DefenseMap, TowerIcon } from './DefenseMap';
 
@@ -19,12 +20,14 @@ export function DefenseCard(props: { act: Act; version: number; filter?: string 
   const [speed, setSpeed] = useState(3);
   const [ended, setEnded] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [away, setAway] = useState<string | null>(null);
   const onView = props.onView;
 
   useEffect(() => {
     api.game().then((v) => {
       setView(v);
       onView?.(v);
+      setAway((prev) => awayText(v) ?? prev);
     }).catch(() => {});
   }, [props.version, onView]);
 
@@ -66,6 +69,13 @@ export function DefenseCard(props: { act: Act; version: number; filter?: string 
         {view.discount > 0 && <span className="pill cyan">-{Math.round(view.discount * 100)}% prices</span>}
       </div>
 
+      {away && (
+        <div className="away row" role="status">
+          <span className="grow small">{away}</span>
+          <button className="btn ghost" onClick={() => { setAway(null); play(); }}><Eye size={15} /> Watch</button>
+          <button className="icon-btn" onClick={() => setAway(null)} aria-label="dismiss"><X size={15} /></button>
+        </div>
+      )}
       <div className="defense-wrap">
         <DefenseMap view={view} selected={selected} onSelect={(s) => { setSelected(s); }} watch={watch} speed={speed}
           onEnd={() => setEnded(true)} filter={props.filter} />
@@ -117,6 +127,31 @@ export function DefenseCard(props: { act: Act; version: number; filter?: string 
       )}
     </Card>
   );
+}
+
+/**
+ * "While you were away": the attempts made since this device last looked (shown once).
+ * The first visit only remembers where things stand.
+ */
+function awayText(v: DefenseView): string | null {
+  const seen = loadSeenAttempt();
+  const latest = v.recent[0];
+  if (!latest) {
+    if (seen === null) saveSeenAttempt(''); // visited before any attempt: everything later is news
+    return null;
+  }
+  saveSeenAttempt(latest.key);
+  if (seen === null || seen === latest.key) return null;
+  const idx = v.recent.findIndex((a) => a.key === seen);
+  const fresh = (idx < 0 ? v.recent : v.recent.slice(0, idx)).filter((a) => !a.manual).reverse();
+  if (fresh.length === 0) return null;
+  const won = fresh.filter((a) => a.won).map((a) => a.wave);
+  const lost = fresh.filter((a) => !a.won);
+  const parts = [];
+  if (won.length === 1) parts.push(`wave ${won[0]} cleared`);
+  if (won.length > 1) parts.push(`waves ${won[0]} to ${won[won.length - 1]} cleared`);
+  if (lost.length > 0) parts.push(`wave ${lost[lost.length - 1].wave} failed`);
+  return `While you were away: ${parts.join(', ')}.`;
 }
 
 function StatusLine(props: { view: DefenseView; now: number }) {

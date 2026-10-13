@@ -1,0 +1,112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tower catalogue (content/towers.json)",
+  "type": "object",
+  "required": [
+    "towers"
+  ],
+  "properties": {
+    "contractVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "towers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "role",
+          "cost",
+          "base",
+          "paths"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "attack",
+              "support",
+              "income"
+            ]
+          },
+          "cost": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "shape": {
+            "type": "string",
+            "enum": [
+              "dot",
+              "square",
+              "snow",
+              "triangle",
+              "bolt",
+              "drop",
+              "flag",
+              "coin"
+            ]
+          },
+          "requires": {},
+          "base": {
+            "type": "object"
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "tiers"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "tiers": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "cost",
+                      "description",
+                      "set"
+                    ],
+                    "properties": {
+                      "cost": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "set": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

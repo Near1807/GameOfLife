@@ -1,14 +1,15 @@
 # GameLife
 
 A single-user toolbox where real daily actions (quests, focus blocks, habits, a mood check-in)
-feed one append-only XP ledger, and every XP is damage in a boss fight you can lose. A modern
-dark sci-fi interface, with pixel art only for the game content.
+feed one append-only XP ledger. Real work produces coins and stat levels; the coins are spent in a
+tower-defense game that plays itself every two hours on the server. A modern dark sci-fi
+interface; the map is vector art, the hero is pixel art.
 
-**Status: version 3 (final scope of the v3 brief).** Losable boss fight, folder-driven content,
-battle arena, shop with weapon and armour upgrades, charms, looks and themes, ascension,
-38 achievements, pacing simulation, content validator, palette-snap tool, style guide and PWA
-install. See `DECISIONS.md` for every default and assumption, `docs/DEMO.md` for what to try,
-`docs/PACING.md` for the simulation, and `docs/screenshots/v3/` for how it looks.
+**Status: version 4.** The boss fight is replaced by a deterministic tower-defense game: 8 towers
+with two upgrade paths each, 15 spots, automatic waves with catch-up, replays, Markets that raise
+real earnings, stats that power the towers. Cosmetic shop, 39 achievements, pacing simulation,
+content validator, PWA. See `DECISIONS.md` for every default and assumption, `docs/DEMO.md` for
+what to try, `docs/PACING.md` for the simulation, and `docs/screenshots/v4/` for how it looks.
 
 ## Requirements
 
@@ -51,7 +52,7 @@ npm run dev:frontend   # terminal 2: Vite on :5173, forwards /api and /content t
 ## Test
 
 ```bash
-npm test               # backend (JUnit, 98 tests) then frontend (Vitest, 30 tests)
+npm test               # backend (JUnit) then frontend (Vitest)
 ```
 
 Or separately: `npm run test:backend`, `npm run test:frontend`. The backend tests use their own
@@ -60,22 +61,32 @@ databases in `backend/target/test-data/` and never touch your real data.
 ## Pacing simulation
 
 ```bash
-npm run simulate       # lazy, average and strong players over a year with the current config
+npm run simulate       # lazy, average and strong players play the map for a year with the current config
 ```
 
 The results and the tuning that was applied are in `docs/PACING.md`.
 
-## How the fight works (brief 9.1)
+## How the game works (v4)
 
-- **Damage:** every XP you validate damages the current boss at once. Un-ticking gives the damage back. Extra damage on a kill is lost.
-- **Nightly attack:** at the 04:00 reset the boss hits you for its attack × (1 − shield) × (1 − armour). The shield is that day's XP divided by the daily goal (100). A fully shielded day heals you 10 HP.
-- **Full protection:** rest days, streak freezes and paused days (up to 7 per 30 days) are fully shielded.
-- **Falling:** at 0 HP you fall. The boss heals to full, you get back up, and the boss shows "Defeated you N times". You keep coins, gear and stat XP (mild mode). `fight.defeatMode` in the config can be `medium` or `hard`.
-- **Victory:** a kill pays 100 coins and the next boss appears at once.
-- **Ascension:** after the last boss picture is beaten you can ascend (New Game+). Bosses come back stronger and you get ×1.05 XP for good.
-- **Recap:** opening the app after the reset shows "While you were away".
+- **Real work pays coins.** Every validated action pays XP as before. The coins it pays are
+  XP x your income bonus (Markets on the map and your Social level). Nothing in the game ever
+  creates coins or XP.
+- **The map.** One path, 15 tower spots: 3 open, the others bought for 150, 218, 315... coins
+  (permanent). Tap a spot to build, tap a tower to upgrade or sell.
+- **Towers.** Archer, Cannon, Frost, Mage, Tesla, Venom, Banner (buffs towers in range) and
+  Market (no attack: +coins on real actions, or cheaper towers with the Bargain path). Each has two
+  paths of three tiers; the first upgrade picks a path for good. Selling refunds everything you
+  paid for that tower.
+- **Stats power the towers.** Strength: physical damage. Intellect: magic damage. Discipline:
+  fire rate. Spirit: slows. Vitality: lives. Social: income. Creativity: cheaper towers. Some
+  towers need a stat level (the Hero screen lists them).
+- **Waves run alone.** Every 2 hours the server plays the current wave with your build. A win
+  moves to the next wave. A loss costs nothing; the wave is tried again only once something that
+  matters changed (otherwise it is "stuck"). At most 16 attempts per game day. "Run now" is an
+  extra attempt under the same rules. Missed attempts are worked out when the app opens.
+- **Watch.** The server sends a replay of any attempt; the app plays it at x1, x3 or x10.
 
-### See a victory and a defeat quickly
+### See a few waves quickly
 
 Start on a throwaway database. The clock offset is a testing aid that pretends time has passed:
 
@@ -83,10 +94,13 @@ Start on a throwaway database. The clock offset is a testing aid that pretends t
 mvn -f backend/pom.xml spring-boot:run -Dspring-boot.run.arguments="--gamelife.db-path=../data/test.db"
 ```
 
-- **Victory:** in **Quests**, type `Boss test`, type `800` in the **min** box, press Enter and tick it. You get 880 XP against the first boss's 800 HP.
-- **Defeat:** stop the backend and restart it a week later:
-  `... -Dspring-boot.run.arguments="--gamelife.db-path=../data/test.db --gamelife.clock-offset-hours=168"`.
-  The recap shows seven nights of attacks, and the hero falls. Never use the offset on your real database.
+- In **Quests**, type `Big day`, type `600` in the **min** box, press Enter and tick it (660 coins).
+- On **Home**, tap the `+` spots and build an Archer, then a Mage or a Market. Tap **Run now**:
+  wave 1 plays, then press **Watch last attempt**.
+- Stop the backend and restart it 12 hours later:
+  `... -Dspring-boot.run.arguments="--gamelife.db-path=../data/test.db --gamelife.clock-offset-hours=12"`.
+  Home says which waves were cleared while it was closed, and after a failure the map is "stuck"
+  until you change the build. Never use the offset on your real database.
 
 ## Adding content
 
@@ -96,28 +110,30 @@ rebuild are needed. A bad file never crashes the app: it is skipped and listed u
 
 | What | Where | Size | Name |
 | --- | --- | --- | --- |
-| Boss | `content/enemies/` | 64×64, or a strip of 4 frames (256×64) | `boss_NN.png`, optional `boss_NN.json` `{"name": "...", "title": "..."}` |
+| Tower | `content/towers.json` | (none) | one entry: id, name, kind, role, cost, requires, base stats, 2 paths x 3 tiers |
+| Enemy and waves | `content/waves.json` | (none) | enemy types and wave groups |
+| Map | `content/maps/` | (none) | `map_NN.json`: path points, base, spots, free spots |
 | Hero look | `content/hero/` | 32×32, or a 4-frame strip (128×32) | `hero_NN.png`, optional `hero_NN.json` `{"name": "..."}` |
-| Region background | `content/regions/` | 320×180 (ground at y = 150) | `region_NN.png`, optional `region_NN.json` |
-| Shop item | `content/items/` | 32×32 (outfits: 128×32 strip) | `NAME.png` + `NAME.json` |
+| Shop look | `content/items/` | 32×32 (outfits: 128×32 strip) | `NAME.png` + `NAME.json` |
 | Theme | `content/themes/` | (none) | `NAME.json` (+ optional `NAME.png` preview) |
 | Achievement | `content/achievements.json` | (none) | one entry per achievement |
 
-- **Bosses** come in number order: boss 1 is `boss_01`, and so on. After the last picture they loop back as tinted "stronger variants", and Settings asks for more boss art. Boss HP and attack always come from the config, never from a file.
-- **The hero look** changes every 10 overall levels (`fight.heroEveryNLevels`). The background changes every 3 bosses (`fight.regionEveryNBosses`).
-- **A shop item** is a PNG and a JSON with `id`, `name`, `kind` (weapon, armor, charm, outfit, skin), `price`, and optionally:
-  - `bonus` `{damagePct, maxHp, reduction}`;
-  - `effect` + `value` (charms: `shieldBonus`, `shieldHeal`, `freezeCapacity`, `comebackBonus`, `goalReduction`);
-  - `requires` `{stat, level}` and `description`.
-
-  Skins carry `tokens.filter`, a CSS filter applied to the arena. See `content/schemas/item.schema.json`.
+- **A tower** tier changes stats with `{"dmg": {"mul": 1.5}, "range": {"add": 25}, "pierce": {"set": 0.5}}`.
+  The stat names are those of the prototype (dmg, rate, range, rad, slow, slowT, burn, pierce,
+  multi, chain, pois, spread, pslow, rbuff, dbuff, coin, disc). `role` is `attack`, `support`
+  (a Banner aura) or `income` (a Market). See `content/schemas/tower.schema.json`. A broken game
+  file on reload keeps the old data and shows a warning.
+- **The hero look** changes every 10 overall levels (`character.heroEveryNLevels`).
+- **A shop item** is a PNG and a JSON with `id`, `name`, `kind` (`outfit` or `skin`), `price`,
+  optional `requires` `{stat, level}` and `description`. Skins carry `tokens.filter`, a CSS filter
+  applied to the map. Looks only.
 - **A theme** is a JSON with `id`, `name`, `kind: "theme"`, `price` and `tokens`, a map of CSS design tokens such as `--bg`, `--violet` or `--accent-grad`. See `content/themes/` for examples.
 - **Before adding pictures,** read `content/styleguide/README.md`. The style guide holds the rules, reference sprites, the palette and a prompt template for image AIs.
 
 The content tools:
 
 ```bash
-node content/tools/palette-snap.mjs in.png content/enemies/boss_11.png   # snap to the 32 colours, check the size
+node content/tools/palette-snap.mjs in.png content/hero/hero_04.png      # snap to the 32 colours, check the size
 node content/tools/validate-content.mjs                                  # check everything (also runs before every build)
 node content/tools/make-sprites.mjs                                      # redraw the placeholder art
 ```
@@ -135,7 +151,7 @@ Restore (replaces **all** current data, only after the file's hash chain checks 
 - In the app: **Settings → Choose a backup file → Confirm restore**.
 - `curl -X POST -H "Content-Type: application/json" --data-binary @backup.json http://localhost:8080/api/backup/import`
 
-Everything is in the ledger, including purchases, equipped items, boss attacks and falls, so one
+Everything is in the ledger, including purchases, towers, spots and every wave attempt, so one
 backup file restores the whole game. Copying `data/gamelife.db` while the backend is stopped
 works too.
 
@@ -146,19 +162,19 @@ backend/    Spring Boot (Java 21), SQLite through JdbcTemplate, no ORM
   src/main/java/gamelife/
     ledger/       append-only ledger, unique keys, hash chain
     payout/       the ONLY place that pays XP, applies multipliers
-    fight/        the losable boss fight: rules, replay from the ledger, nightly attacks
+    game/         tower defense: data, deterministic simulation, build from the ledger, waves
     content/      folder-driven content scanner, served at /content
-    gear/         owned and equipped items, shop, upgrades, loot
+    gear/         owned and equipped looks, cosmetic shop, loot
     achievements/ data-driven achievements
     sim/          pacing simulation (npm run simulate)
     rules/        streak, freezes, stat split, levels
     tasks/ timer/ habits/ checkin/ rest/   the daily tools
     character/ review/ state/ backup/
 frontend/   React + TypeScript + Vite (PWA)
-  src/ui/Arena.tsx         the battle arena
-  src/screens/             home, quests, focus, habits, boss (fight, review, stats), shop, hero, settings
+  src/ui/DefenseMap.tsx    the map canvas and replay playback
+  src/screens/             home (map), quests, focus, habits, review (week, stats), shop, hero, settings
   src/theme.css            the free "Nebula" theme as design tokens
   public/                  PWA manifest, service worker, icons
-content/    enemies, hero, regions, items, themes, schemas, styleguide, tools, achievements.json
+content/    towers.json, waves.json, maps, hero, items, themes, schemas, styleguide, tools, achievements.json
 config/gamelife.json       every number and formula parameter
 ```

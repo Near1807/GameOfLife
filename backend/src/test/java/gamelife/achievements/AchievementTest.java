@@ -14,6 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AchievementTest extends IntegrationTest {
     @Autowired AchievementService achievements;
     @Autowired TaskService tasks;
+    @Autowired gamelife.game.GameService game;
 
     private boolean unlocked(String id) {
         return achievements.statuses().stream().filter(s -> s.id().equals(id)).findFirst().orElseThrow().unlocked();
@@ -34,18 +35,20 @@ class AchievementTest extends IntegrationTest {
 
     @Test
     void unlocksFollowTheLedger() {
-        var t = tasks.create("Boss slayer", 800, List.of("STRENGTH"));
-        tasks.tick(t.id()); // 880 XP: first quest, big day, and the first boss falls
+        var t = tasks.create("Big day", 800, List.of("STRENGTH"));
+        tasks.tick(t.id()); // 880 XP: first quest, big day
+        game.build(0, "archer");
         assertThat(unlocked("first_quest")).isTrue();
         assertThat(unlocked("xp_day_300")).isTrue();
-        assertThat(unlocked("boss_1")).isTrue();
+        assertThat(unlocked("first_tower")).isTrue();
+        assertThat(unlocked("wave_10")).isFalse();
         assertThat(unlocked("quest_10")).isFalse();
         var q10 = achievements.statuses().stream().filter(s -> s.id().equals("quest_10")).findFirst().orElseThrow();
         assertThat(q10.current()).isEqualTo(1.0);
         assertThat(q10.target()).isEqualTo(10.0);
 
-        tasks.untick(t.id()); // un-ticking takes the quest back; the kill stays recorded
+        tasks.untick(t.id()); // un-ticking takes the quest back; the tower stays built
         assertThat(unlocked("first_quest")).isFalse();
-        assertThat(unlocked("boss_1")).isTrue();
+        assertThat(unlocked("first_tower")).isTrue();
     }
 }

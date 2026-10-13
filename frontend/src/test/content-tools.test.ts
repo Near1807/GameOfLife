@@ -30,85 +30,126 @@ function json(rel: string, data: unknown) {
   fs.writeFileSync(f, typeof data === 'string' ? data : JSON.stringify(data));
 }
 const errors = () => validateContent(dir).errors.join('\n');
-const item = (id: string, extra = {}) => ({ id, name: id, kind: 'charm', price: 100, ...extra });
+const item = (id: string, extra = {}) => ({ id, name: id, kind: 'skin', price: 100, ...extra });
+const copyGame = () => {
+  for (const f of ['towers.json', 'waves.json']) fs.copyFileSync(path.join(REAL, f), path.join(dir, f));
+  fs.cpSync(path.join(REAL, 'maps'), path.join(dir, 'maps'), { recursive: true });
+};
 
 beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gamelife-content-'));
   fs.copyFileSync(path.join(REAL, 'palette.json'), path.join(dir, 'palette.json'));
   fs.cpSync(path.join(REAL, 'schemas'), path.join(dir, 'schemas'), { recursive: true });
-  png('enemies/boss_01.png', 64, 64);
+  copyGame();
+  png('hero/hero_01.png', 32, 32);
 });
 afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
 
 describe('content validator (brief 12)', () => {
   it('accepts valid content, including the real content folder', () => {
-    png('hero/hero_01.png', 128, 32);
-    png('regions/region_01.png', 320, 180);
-    png('items/charm_ok.png', 32, 32);
-    json('items/charm_ok.json', item('charm_ok', { effect: 'shieldBonus', value: 0.05 }));
+    png('hero/hero_02.png', 128, 32);
+    png('items/skin_ok.png', 32, 32);
+    json('items/skin_ok.json', item('skin_ok', { tokens: { filter: 'hue-rotate(10deg)' } }));
     expect(validateContent(dir).errors).toEqual([]);
     expect(validateContent(REAL).errors).toEqual([]);
   });
 
   it('rejects a wrong size', () => {
-    png('enemies/boss_02.png', 60, 64);
-    png('regions/region_01.png', 320, 200);
-    expect(errors()).toContain('enemies/boss_02.png: wrong size 60x64');
-    expect(errors()).toContain('regions/region_01.png: wrong size 320x200');
+    png('hero/hero_02.png', 30, 32);
+    png('items/skin_big.png', 64, 64);
+    json('items/skin_big.json', item('skin_big'));
+    expect(errors()).toContain('hero/hero_02.png: wrong size 30x32');
+    expect(errors()).toContain('items/skin_big.png: wrong size 64x64');
   });
 
   it('rejects an off-palette colour', () => {
-    png('enemies/boss_02.png', 64, 64, '#123457');
-    expect(errors()).toContain('boss_02.png: 1 off-palette colour(s), e.g. #123457');
+    png('hero/hero_02.png', 32, 32, '#123457');
+    expect(errors()).toContain('hero_02.png: 1 off-palette colour(s), e.g. #123457');
   });
 
   it('rejects semi-transparent pixels', () => {
-    png('enemies/boss_02.png', 64, 64, PALETTE[3], 128);
-    expect(errors()).toContain('boss_02.png: 4096 semi-transparent pixel(s)');
+    png('hero/hero_02.png', 32, 32, PALETTE[3], 128);
+    expect(errors()).toContain('hero_02.png: 1024 semi-transparent pixel(s)');
   });
 
   it('rejects a bad name', () => {
-    png('enemies/Boss_02.png', 64, 64);
-    png('enemies/dragon.png', 64, 64);
-    png('items/Big Sword.png', 32, 32);
-    expect(errors()).toContain('enemies/Boss_02.png: bad name');
-    expect(errors()).toContain('enemies/dragon.png: bad name');
-    expect(errors()).toContain('items/Big Sword.png: bad name');
+    png('hero/Hero_02.png', 32, 32);
+    png('hero/knight.png', 32, 32);
+    png('items/Big Hat.png', 32, 32);
+    expect(errors()).toContain('hero/Hero_02.png: bad name');
+    expect(errors()).toContain('hero/knight.png: bad name');
+    expect(errors()).toContain('items/Big Hat.png: bad name');
   });
 
   it('rejects a missing sprite', () => {
-    json('items/charm_ghost.json', item('charm_ghost'));
-    json('enemies/boss_07.json', { name: 'No picture' });
-    expect(errors()).toContain('items/charm_ghost.json: missing sprite charm_ghost.png');
-    expect(errors()).toContain('enemies/boss_07.json: sidecar without picture boss_07.png');
+    json('items/skin_ghost.json', item('skin_ghost'));
+    json('hero/hero_07.json', { name: 'No picture' });
+    expect(errors()).toContain('items/skin_ghost.json: missing sprite skin_ghost.png');
+    expect(errors()).toContain('hero/hero_07.json: sidecar without picture hero_07.png');
   });
 
   it('rejects duplicate numbers and duplicate ids', () => {
-    png('enemies/boss_1.png', 64, 64);
-    png('items/charm_a.png', 32, 32);
-    json('items/charm_a.json', item('charm_same'));
-    png('items/charm_b.png', 32, 32);
-    json('items/charm_b.json', item('charm_same'));
+    png('hero/hero_1.png', 32, 32);
+    png('items/skin_a.png', 32, 32);
+    json('items/skin_a.json', item('skin_same'));
+    png('items/skin_b.png', 32, 32);
+    json('items/skin_b.json', item('skin_same'));
     expect(errors()).toContain('duplicate number 1');
-    expect(errors()).toContain('duplicate id "charm_same"');
+    expect(errors()).toContain('duplicate id "skin_same"');
   });
 
-  it('rejects schema errors', () => {
-    png('items/charm_bad.png', 32, 32);
-    json('items/charm_bad.json', { id: 'charm_bad', name: 'Bad', kind: 'hat', price: -5 });
-    png('items/charm_broken.png', 32, 32);
-    json('items/charm_broken.json', '{ not json');
+  it('rejects schema errors, including the old power items', () => {
+    png('items/skin_bad.png', 32, 32);
+    json('items/skin_bad.json', { id: 'skin_bad', name: 'Bad', kind: 'hat', price: -5 });
+    png('items/charm_old.png', 32, 32);
+    json('items/charm_old.json', { id: 'charm_old', name: 'Old', kind: 'charm', price: 100 });
+    png('items/skin_broken.png', 32, 32);
+    json('items/skin_broken.json', '{ not json');
     json('themes/theme_x.json', { id: 'theme_x', name: 'X', kind: 'theme', price: 300 });
     const e = errors();
-    expect(e).toContain('charm_bad.json: schema error: kind must be one of');
-    expect(e).toContain('charm_bad.json: schema error: price must be >= 0');
-    expect(e).toContain('charm_broken.json: invalid JSON');
+    expect(e).toContain('skin_bad.json: schema error: kind must be one of');
+    expect(e).toContain('skin_bad.json: schema error: price must be >= 0');
+    expect(e).toContain('charm_old.json: schema error: kind must be one of outfit, skin');
+    expect(e).toContain('skin_broken.json: invalid JSON');
     expect(e).toContain('theme_x.json: schema error: tokens is required');
   });
 
   it('rejects an unreadable PNG', () => {
-    json('enemies/boss_02.png', 'not a picture');
-    expect(errors()).toContain('boss_02.png: unreadable PNG');
+    json('hero/hero_02.png', 'not a picture');
+    expect(errors()).toContain('hero_02.png: unreadable PNG');
+  });
+});
+
+describe('content validator: tower-defense data (v4)', () => {
+  const edit = (file: string, change: (d: any) => void) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const f = path.join(dir, file);
+    const d = JSON.parse(fs.readFileSync(f, 'utf8'));
+    change(d);
+    fs.writeFileSync(f, JSON.stringify(d));
+  };
+
+  it('rejects a tower with a wrong path, tier, stat or requirement', () => {
+    edit('towers.json', (d) => {
+      d.towers[0].paths[0].tiers.pop();
+      d.towers[1].paths.pop();
+      d.towers[2].paths[0].tiers[0].set = { damage: { mul: 2 } };
+      d.towers[3].requires = { stat: 'LUCK', level: 3 };
+      d.towers.push({ ...d.towers[4] });
+    });
+    const e = errors();
+    expect(e).toContain('towers.json (archer): path Sniper needs exactly 3 tiers');
+    expect(e).toContain('towers.json (cannon): needs exactly 2 upgrade paths');
+    expect(e).toContain('towers.json (frost): path Deep freeze: unknown stat "damage"');
+    expect(e).toContain('towers.json (mage): requires needs a stat id');
+    expect(e).toContain('duplicate id "tesla"');
+  });
+
+  it('rejects a wave of an unknown enemy and a spot outside the map', () => {
+    edit('waves.json', (d) => d.groups.push({ type: 'dragon', from: 1, base: 1, per: 0, gap: 1 }));
+    edit('maps/map_01.json', (d) => d.spots.push([2000, 10]));
+    const e = errors();
+    expect(e).toContain('waves.json: group of unknown enemy "dragon"');
+    expect(e).toContain('maps/map_01.json: spot 15 is outside the map');
   });
 });
 
@@ -125,9 +166,9 @@ describe('palette snap', () => {
   });
 
   it('flags wrong dimensions', () => {
-    expect(sizeProblem('boss', 64, 64)).toBeNull();
-    expect(sizeProblem('boss', 256, 64)).toBeNull();
-    expect(sizeProblem('boss', 100, 64)).toContain('must be 64x64');
-    expect(sizeProblem('region', 640, 360)).toContain('must be 320x180');
+    expect(sizeProblem('hero', 32, 32)).toBeNull();
+    expect(sizeProblem('hero', 128, 32)).toBeNull();
+    expect(sizeProblem('hero', 100, 32)).toContain('must be 32x32');
+    expect(sizeProblem('item', 64, 64)).toContain('must be 32x32');
   });
 });

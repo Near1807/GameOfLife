@@ -4,7 +4,84 @@ Every assumption and default applied while building GameLife. Section numbers re
 brief; "v2" refers to the version 2 upgrade request, which wins where the two disagree. Numbers
 are in `config/gamelife.json`, rules are in the file named next to them.
 
-## Version 3 (final scope): what was applied
+## Version 4: the tower-defense game replaces the boss fight
+
+The v4 brief replaces the boss fight with a server-side, deterministic tower-defense game. The v3
+sections below are kept as history: everything they say about the boss, the arena, weapon and
+armour levels, charms, pause, ascension and defeat modes no longer applies.
+
+### Choices where the brief or the prototype left room (please read)
+
+1. **Stat bonuses count levels above 1.** In the prototype a stat goes from 0 to 30; in the app
+   every stat starts at level 1. Using the level as is would give every new character +3% income,
+   +3% damage and so on for free (and coins would no longer equal XP on day one). So every bonus
+   multiplies `level - 1` (`GameMath.bonus`): Strength level 6 gives +15%, like 5 in the prototype.
+   Tower requirements (Cannon needs Strength 3) use the level itself, as written.
+2. **Spot prices.** The brief says 150 x 1.45^n "where n counts the spots unlocked beyond the free
+   ones". I read n as the spots already bought, so the first costs 150, then 218, 315, 457...
+   (the prototype charged 218 for the first). Spots are not discounted by Bargain or Creativity,
+   as in the prototype.
+3. **The "stuck" rule ignores currency, Markets, Social and Creativity.** The brief lists "more
+   currency" as a change that allows a retry. Currency cannot change a fight result (the build is
+   what fights), so a retry with only more coins would fail identically and only fill the ledger.
+   A retry happens when the wave's inputs change: an attacking or Banner tower, a tier, the stats
+   the fight uses (Strength, Intellect, Discipline, Spirit, Vitality), or the rules (a config or
+   data change, detected by a hash of `config.game` and the data files).
+4. **Losing.** As in the prototype, a wave is lost only when lives reach 0: with 10 lives, wave 1
+   (6 grunts) is cleared even with no tower at all. The schedule only starts with the first tower,
+   so nothing happens before the owner builds.
+5. **Dead enemies are not targeted.** In the prototype an enemy killed by one tower stays
+   targetable until the next step, so other towers could waste shots on it in the same step. The
+   server ignores enemies at 0 HP for targeting, splash and chains. Everything else follows the
+   prototype's order of operations.
+6. **Slots.** Attempts happen every `game.waveIntervalMinutes` (120) counted from the first tower
+   build, not from midnight. `game.maxAttemptsPerDay` is 16 per game day (04:00 to 04:00): the 12
+   automatic slots never reach it, which leaves room for about 4 "Run now" taps a day.
+7. **Each slot sees the past.** A catch-up computes a missed slot with the build and stat levels as
+   they were at that moment (`GameLedger.timeline`), not as they are when the app is opened. The
+   event is written later, but its meta `at` holds the slot time, and the review counts it on that
+   day.
+8. **Replays are not stored.** A replay can be large (900 samples for a long wave). The ledger
+   stores each attempt's inputs (towers with tiers, stats, wave, map) and its result; "Watch" runs
+   the same pure function again (the last few are kept in memory). If the rules changed since, the
+   answer says `sameAsRecorded: false`; the ledger result stays the truth.
+9. **The Market factor.** Payouts now write `currency = final XP x income`, where income =
+   (1 + sum of Market coin) x (1 + 3% per Social level above 1). XP and stat XP are never
+   multiplied. Before v4, currency always equalled XP; old events are unchanged.
+10. **Ascension, charms, weapon and armour are gone.** Their effects on XP (weapon x, ascension x,
+    comeback charm, freeze charm) were removed too: final XP = base x streak x comeback. Old ledger
+    events (BOSS_ATTACK, HERO_FELL, STAGE_CLEARED, UPGRADE, ASCEND, PAUSE) still read fine and keep
+    their coin effects (a v3 kill reward stays in the balance). Paused days from v3 still count as
+    rest days for the streak; no new pause can be made.
+11. **Shop.** Outfits, map skins (a CSS filter on the map canvas, as the arena skins were) and
+    themes. The v3 weapon, armour and charm files were deleted from `content/items`.
+12. **Boss and region art deleted.** The map, towers and enemies are vector shapes on a canvas
+    (prototype look). `content/enemies` and `content/regions` are gone; optional tower and enemy
+    sprites are left for later as the brief says.
+13. **Achievements.** The ten fight achievements were replaced by map ones (wave 10, 25, 50 and
+    100, first tower, 5 spots, a tier-3 path, 5 kinds of tower, a retry that wins, a Market): 39 in
+    total.
+14. **Hero picture.** It used to follow the fight; it now changes every
+    `character.heroEveryNLevels` (10) overall levels.
+15. **Build, upgrade and sell taps.** Tapping a spot opens its panel (navigation, like opening a
+    screen). Then: build = 1 tap on a tower, upgrade = 1 tap on a path, sell = 1 tap + 1
+    confirmation. A double tap is harmless: build answers "Already built", upgrade sends the tier
+    it saw (key `...:path0:tier2`), sell answers "Already sold".
+
+### Where things are
+
+- Data: `content/towers.json` (8 towers, 2 paths x 3 tiers each, changes as `mul`/`add`/`set`),
+  `content/waves.json` (enemy types, wave groups), `content/maps/map_01.json` (path, base, 15
+  spots, 3 free). Numbers: `config/gamelife.json` → `game`.
+- Simulation: `backend/.../game/Simulator.java`, a pure function with a fixed 1/60 s step and no
+  randomness. Formulas: `GameMath.java`. Ledger to state: `GameLedger.java`. Spending:
+  `GameService.java`. Schedule and catch-up: `WaveService.java`.
+- Ledger keys: `spot:{map}:{spot}`, `tower:{map}:{spot}:{n}:built`, `...:path{p}:tier{t}`,
+  `...:sold` (n = the n-th tower on that spot), `wave-attempt:{wave}:{attempt}`.
+- Screens: the home screen shows the map card first (`ui/DefenseCard.tsx`, `ui/DefenseMap.tsx`);
+  the "Boss" tab became "Review" (weekly review and stats).
+
+## Version 3 (final scope): what was applied (history: the fight parts are replaced by v4)
 
 The v3 brief replaces the earlier ones. Its "Required" rules came first, then its "Default" rules.
 Everything below is configurable in `config/gamelife.json` or the content folder unless noted.

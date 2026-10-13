@@ -9,8 +9,6 @@ import gamelife.rules.LedgerFacts;
 import gamelife.rules.StatSplitter;
 import gamelife.rules.StreakCalculator;
 import gamelife.rules.StreakState;
-import gamelife.fight.FightRules;
-import gamelife.fight.FightService;
 import gamelife.gear.GearService;
 import gamelife.game.GameService;
 import gamelife.time.GameTime;
@@ -23,7 +21,7 @@ import java.util.Map;
 
 /**
  * Turns an explicit act into a ledger payment (brief 6):
- *   final XP = base x streak x weapon x ascension x comeback
+ *   final XP = base x streak x comeback
  *   currency = final XP x income   (v4: income = Markets and Social, see GameMath.incomeMultiplier)
  * Stat XP = base XP split equally between the tags (brief 8: gear cannot inflate stats).
  *
@@ -34,14 +32,12 @@ public class PayoutService {
     private final LedgerService ledger;
     private final GameConfig config;
     private final GameTime time;
-    private final FightService fight;
     private final GearService gear;
     private final GameService game;
 
-    public PayoutService(LedgerService ledger, GameConfig config, GameTime time, FightService fight, GearService gear,
+    public PayoutService(LedgerService ledger, GameConfig config, GameTime time, GearService gear,
                          GameService game) {
         this.game = game;
-        this.fight = fight;
         this.gear = gear;
         this.ledger = ledger;
         this.config = config;
@@ -49,9 +45,9 @@ public class PayoutService {
     }
 
     /** All multipliers that apply to a payment made right now. */
-    public record Multipliers(double streak, double weapon, double ascension, double comeback) {
+    public record Multipliers(double streak, double comeback) {
         double product() {
-            return streak * weapon * ascension * comeback;
+            return streak * comeback;
         }
     }
 
@@ -64,8 +60,6 @@ public class PayoutService {
         if (existing.isPresent()) {
             return new ActionResult(existing.get(), false, "Already counted");
         }
-        fight.sync(); // the boss's attacks of past days come first (brief 9.1)
-
         Multipliers m = multipliersNow(ledger.all());
         BigDecimal base = Money.of(req.baseXp());
         BigDecimal finalXp = Money.of(base.multiply(BigDecimal.valueOf(m.product())));
@@ -81,8 +75,6 @@ public class PayoutService {
         meta.put("tags", req.tags());
         meta.put("mult", Map.of(
                 "streak", round4(m.streak()),
-                "weapon", round4(m.weapon()),
-                "ascension", round4(m.ascension()),
                 "comeback", round4(m.comeback()),
                 "income", round4(income)));
 
@@ -90,7 +82,6 @@ public class PayoutService {
                 finalXp, currency, StatSplitter.split(base, req.tags()), meta);
         LedgerService.AppendResult result = ledger.append(event);
         if (result.written() && finalXp.signum() > 0) {
-            fight.sync();                       // the boss may have just died: the kill is written now
             gear.maybeDropLoot(req.key());      // rare cosmetic drop (brief 10)
         }
         return new ActionResult(result.event(), result.written(), result.written() ? "Paid" : "Already counted");
@@ -99,19 +90,14 @@ public class PayoutService {
     /** Multipliers for a payment made now, computed from the ledger. */
     public Multipliers multipliersNow(List<LedgerEvent> events) {
         StreakState streak = streakNow(events);
-        GearService.Loadout l = gear.loadout(events);
         double streakMult = StreakCalculator.multiplier(streak.streakForPayment(), config.streak());
-        // weapon level (+10% each, compounding) x the damage bonus of an equipped weapon item
-        double weaponMult = FightRules.weaponMultiplier(l.weaponLevel(), config.weapon()) * (1 + l.bonus().damagePct());
-        double ascensionMult = Math.pow(config.ascension().perAscension(), LedgerFacts.ascensions(events));
-        double comebackMult = streak.comebackPending()
-                ? config.streak().comebackMultiplier() + l.effect(GearService.COMEBACK_BONUS) : 1.0;
-        return new Multipliers(streakMult, weaponMult, ascensionMult, comebackMult);
+        double comebackMult = streak.comebackPending() ? config.streak().comebackMultiplier() : 1.0;
+        return new Multipliers(streakMult, comebackMult);
     }
 
     public StreakState streakNow(List<LedgerEvent> events) {
         return StreakCalculator.compute(LedgerFacts.countedDays(events), LedgerFacts.restOrPausedDays(events),
-                time.today(), config.streak(), (int) gear.loadout(events).effect(GearService.FREEZE_CAPACITY));
+                time.today(), config.streak());
     }
 
     private static double round4(double v) {

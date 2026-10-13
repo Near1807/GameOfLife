@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
-/** Brief 9.1: the weekly review is a calendar-week report, and the stats dashboard. */
+/** v4 brief 4: the weekly review (waves, towers, coins) and the stats dashboard. */
 @AutoConfigureMockMvc
 class ReviewTest extends IntegrationTest {
     @Autowired ReviewService review;
@@ -27,7 +27,7 @@ class ReviewTest extends IntegrationTest {
     @Autowired MockMvc mvc;
 
     @Test
-    void weekReviewShowsDamageDealtTakenAndSkippedHabits() throws Exception {
+    void weekReviewShowsXpWavesCoinsAndSkippedHabits() throws Exception {
         var h = habits.create("Read", EnumSet.allOf(DayOfWeek.class), List.of("INTELLECT"));
         habits.done(h.id());                                         // Monday: 22 XP
         tasks.tick(tasks.create("Task", 60, List.of("INTELLECT")).id()); // + 66 XP
@@ -36,15 +36,35 @@ class ReviewTest extends IntegrationTest {
         assertThat(r.weekStart()).isEqualTo(LocalDate.of(2026, 3, 2));
         assertThat(r.days()).hasSize(7);
         assertThat(r.days().get(0).xp()).isEqualTo(88.0);
-        assertThat(r.damageDealt()).isEqualTo(88.0);
-        // Monday 88 XP: shield 0.88, 20 x 0.12 = 2.4; Tuesday zero XP: 20
-        assertThat(r.damageTaken()).isEqualTo(22.4);
-        assertThat(r.falls()).isZero();
+        assertThat(r.xp()).isEqualTo(88.0);
+        assertThat(r.coinsEarned()).isEqualTo(88.0);
+        assertThat(r.statXp().get("INTELLECT")).isEqualTo(80.0);
+        assertThat(r.towersBuilt()).isEqualTo(0);
         assertThat(r.statXp().get("INTELLECT")).isEqualTo(80.0);
         assertThat(r.skippedHabits()).singleElement().satisfies(s -> assertThat(s.missed()).isEqualTo(1));
         mvc.perform(get("/api/review").param("week", "2026-03-04"))
                 .andExpect(jsonPath("$.weekStart").value("2026-03-02"))
                 .andExpect(jsonPath("$.days.length()").value(7));
+    }
+
+    @Autowired gamelife.game.GameService game;
+
+    @Test
+    void weekReviewCountsWavesTowersAndSpending() {
+        tasks.tick(tasks.create("Earn", 400, List.of()).id());   // 440 coins
+        game.build(0, "archer");                                  // -100
+        game.build(1, "archer");                                  // -100
+        game.sell(1, true);                                       // +100
+        clock.advance(Duration.ofHours(30));                      // Tuesday 16:00: slots ran
+        var r = review.week(null);
+        assertThat(r.towersBuilt()).isEqualTo(2);
+        assertThat(r.coinsEarned()).isEqualTo(440.0);
+        assertThat(r.coinsSpent()).isEqualTo(100.0);
+        assertThat(r.wavesCleared()).isGreaterThan(0);
+        assertThat(r.furthestWave()).isEqualTo(r.wavesCleared());
+        assertThat(r.wavesFailed()).isEqualTo(1);                 // then stuck: no repeat
+        assertThat(review.week(LocalDate.of(2026, 3, 9)).wavesCleared()).isZero();
+        assertThat(review.dashboard(30).furthestWave()).isEqualTo(r.furthestWave());
     }
 
     @Test
