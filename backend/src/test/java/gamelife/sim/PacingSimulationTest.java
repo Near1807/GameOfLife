@@ -2,36 +2,55 @@ package gamelife.sim;
 
 import gamelife.config.GameConfig;
 import gamelife.game.GameCatalog;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** v4 brief 6: the pacing targets that the shipped config meets (see docs/PACING.md). */
+/** v4 brief 6 and v4.1: the pacing targets the shipped config meets (see docs/PACING.md). */
 class PacingSimulationTest {
     static final GameConfig CFG = GameConfig.load(Path.of("../config/gamelife.json"));
     static final GameCatalog CAT = GameCatalog.load(Path.of("../content"));
+    static final Map<PacingSimulation.Profile, PacingSimulation.Report> YEAR = new EnumMap<>(PacingSimulation.Profile.class);
+
+    @BeforeAll
+    static void playAYear() {
+        List.of(PacingSimulation.Profile.values()).parallelStream()
+                .map(p -> PacingSimulation.run(p, 365, CFG, CAT)).toList()
+                .forEach(r -> YEAR.put(r.profile(), r));
+    }
 
     @Test
-    void everyProfileProgressesAndKeepsBuyingAllYear() {
-        for (PacingSimulation.Profile p : PacingSimulation.Profile.values()) {
-            var r = PacingSimulation.run(p, 365, CFG, CAT);
-            assertThat(r.waveOnDay().get(30)).as(p + " day 30").isGreaterThan(5);
-            assertThat(r.waveOnDay().get(100)).as(p + " day 100").isGreaterThan(r.waveOnDay().get(30));
-            assertThat(r.waveOnDay().get(365)).as(p + " day 365").isGreaterThan(r.waveOnDay().get(100));
-            assertThat(r.lastPurchaseDay()).as(p + " still buying late in the year").isGreaterThan(250);
-            assertThat(r.optionsLeft()).as(p + " something left to buy").isPositive();
+    void everyProfileKeepsProgressingAndBuyingAfterDay300() {
+        for (var r : YEAR.values()) {
+            var w = r.waveOnDay();
+            assertThat(w.get(100)).as(r.profile() + " day 100").isGreaterThan(w.get(30));
+            assertThat(w.get(300)).as(r.profile() + " day 300").isGreaterThan(w.get(200));
+            assertThat(r.lastNewWaveDay()).as(r.profile() + " still clearing new waves").isGreaterThan(300);
+            assertThat(r.lastPurchaseDay()).as(r.profile() + " still buying").isGreaterThan(300);
+            assertThat(r.optionsLeft()).as(r.profile() + " something left to buy").isPositive();
+            assertThat(r.longestStall()).as(r.profile() + " no long wall").isLessThan(70);
         }
     }
 
     @Test
-    void strongIsFarAheadInTheFirstMonthAndNeverBehind() {
-        var lazy = PacingSimulation.run(PacingSimulation.Profile.LAZY, 365, CFG, CAT);
-        var strong = PacingSimulation.run(PacingSimulation.Profile.STRONG, 365, CFG, CAT);
-        assertThat(strong.waveOnDay().get(30)).isGreaterThanOrEqualTo((int) (1.7 * lazy.waveOnDay().get(30)));
-        for (int day : new int[]{30, 100, 365}) {
-            assertThat(strong.waveOnDay().get(day)).isGreaterThanOrEqualTo(lazy.waveOnDay().get(day));
+    void everyoneMovesToTheSecondMapAndOnlyTheStrongReachTheThird() {
+        assertThat(YEAR.values()).allMatch(r -> !r.moves().isEmpty());
+        assertThat(YEAR.get(PacingSimulation.Profile.STRONG).map()).isEqualTo("Data Serpent");
+        assertThat(YEAR.get(PacingSimulation.Profile.LAZY).map()).isEqualTo("Circuit Switchback");
+    }
+
+    @Test
+    void strongStaysWellAhead() {
+        var lazy = YEAR.get(PacingSimulation.Profile.LAZY).waveOnDay();
+        var strong = YEAR.get(PacingSimulation.Profile.STRONG).waveOnDay();
+        for (int day : new int[]{30, 100, 200, 300, 365}) {
+            assertThat(strong.get(day)).as("day " + day).isGreaterThanOrEqualTo((int) Math.ceil(1.4 * lazy.get(day)));
         }
     }
 

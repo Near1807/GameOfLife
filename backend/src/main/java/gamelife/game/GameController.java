@@ -32,6 +32,9 @@ public class GameController {
     /** confirm must be true: the UI sends it on the confirmation tap. */
     public record SellInput(int spot, boolean confirm) {}
 
+    /** Moving sells every tower here for a full refund: it needs a confirmation tap. */
+    public record MoveInput(String map, boolean confirm) {}
+
     @PostMapping("/unlock")
     public ActionResult unlock(@RequestBody SpotInput in) {
         return game.unlock(in.spot());
@@ -50,6 +53,11 @@ public class GameController {
     @PostMapping("/sell")
     public ActionResult sell(@RequestBody SellInput in) {
         return game.sell(in.spot(), in.confirm());
+    }
+
+    @PostMapping("/move")
+    public ActionResult move(@RequestBody MoveInput in) {
+        return game.move(in.map(), in.confirm());
     }
 
     /** An extra attempt now, under the same daily cap and "stuck" rule as the automatic ones. */

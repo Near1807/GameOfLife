@@ -14,16 +14,24 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * The game state is never stored: it is derived from the ledger (v4 brief 3). Pure functions.
  *
- *   SPOT_UNLOCKED   meta {spot, price}               opens a spot
- *   TOWER_BUILT     meta {spot, n, tower, price}     n = how many towers this spot has had
- *   TOWER_UPGRADED  meta {spot, n, path, tier, price}
- *   TOWER_SOLD      meta {spot, n, refund}           the refund is the tower's "paid"
- *   WAVE_CLEARED / WAVE_FAILED  meta {wave, attempt, at, manual, inputs, towers, stats, lives, ...}
+ *   SPOT_UNLOCKED   meta {map, spot, price}          opens one spot of a map
+ *   TOWER_BUILT     meta {map, spot, n, tower, price} n = how many towers this spot has had
+ *   TOWER_UPGRADED  meta {map, spot, n, path, tier, price}
+ *   TOWER_SOLD      meta {map, spot, n, refund}      the refund is the tower's "paid"
+ *   MAP_CHOSEN      meta {map}                       the map the player plays on from now
+ *   WAVE_CLEARED / WAVE_FAILED  meta {wave, attempt, at, manual, map, inputs, towers, stats, lives, ...}
+ *
+ * Maps (chapters): the player plays on one map at a time (the first map until a MAP_CHOSEN). The
+ * NUMBER of open spots carries over: on any map, open = the spots bought on that map, plus its first
+ * spots in file order until there are freeSpots + all spots bought anywhere. Events written before
+ * maps existed have no "map" in their meta: they belong to the first map.
  */
 public final class GameLedger {
     private GameLedger() {}
@@ -39,10 +47,12 @@ public final class GameLedger {
                           Map<String, Object> meta) {}
 
     /**
-     * wave = the wave to attempt next. builds = towers built so far per spot (for the keys).
-     * spotsBought = spots unlocked with currency.
+     * map = the map played on. build = its open spots and towers. wave = the wave to attempt next (it
+     * carries over between maps). builds = towers built so far per spot of this map (for the keys).
+     * spotsBought = spots unlocked with currency, on all maps. mapChoices = MAP_CHOSEN events so far.
      */
-    public record State(Build build, int wave, int spotsBought, Map<Integer, Integer> builds, List<Attempt> attempts) {
+    public record State(GameCatalog.MapDef map, Build build, int wave, int spotsBought, Map<Integer, Integer> builds,
+                        List<Attempt> attempts, int mapChoices) {
         public Attempt lastAttempt() {
             return attempts.isEmpty() ? null : attempts.get(attempts.size() - 1);
         }
@@ -52,51 +62,59 @@ public final class GameLedger {
         }
     }
 
-    public static State derive(List<LedgerEvent> events, int freeSpots) {
-        Folder f = new Folder(freeSpots);
+    public static State derive(List<LedgerEvent> events, GameCatalog cat) {
+        Folder f = new Folder(cat);
         events.forEach(f::apply);
         return f.state();
     }
 
     /** Applies events one by one; also used to follow the build through time. */
     static final class Folder {
-        Build build;
-        int wave = 1, spotsBought;
-        final Map<Integer, Integer> builds = new TreeMap<>();
+        final GameCatalog cat;
+        GameCatalog.MapDef map;
+        final Map<String, Set<Integer>> bought = new HashMap<>();   // map id -> spots bought there
+        final Map<Integer, Build.Tower> towers = new TreeMap<>();
+        final Map<String, Integer> builds = new HashMap<>();         // "map:spot" -> towers built
         final List<Attempt> attempts = new ArrayList<>();
+        int wave = 1, spotsBought, mapChoices;
+        Build build;
 
-        Folder(int freeSpots) {
-            build = Build.empty(freeSpots);
+        Folder(GameCatalog cat) {
+            this.cat = cat;
+            this.map = cat.firstMap();
+            this.build = makeBuild();
         }
 
-        /** Returns true when the event changed the build. */
+        /** Returns true when the event changed the build or the map. */
         boolean apply(LedgerEvent e) {
             switch (e.type()) {
                 case SPOT_UNLOCKED -> {
-                    build = build.withOpenSpot(intOf(meta(e), "spot"));
+                    Map<String, Object> m = meta(e);
+                    bought.computeIfAbsent(mapOf(m), k -> new TreeSet<>()).add(intOf(m, "spot"));
                     spotsBought++;
-                    return true;
                 }
                 case TOWER_BUILT -> {
                     Map<String, Object> m = meta(e);
                     int spot = intOf(m, "spot");
-                    build = build.withTower(spot, new Build.Tower((String) m.get("tower"), 0, 0,
-                            -e.currencyDelta().doubleValue()));
-                    builds.put(spot, intOf(m, "n"));
-                    return true;
+                    towers.put(spot, new Build.Tower((String) m.get("tower"), 0, 0, -e.currencyDelta().doubleValue()));
+                    builds.put(mapOf(m) + ":" + spot, intOf(m, "n"));
                 }
                 case TOWER_UPGRADED -> {
                     Map<String, Object> m = meta(e);
                     int spot = intOf(m, "spot");
-                    Build.Tower t = build.towers().get(spot);
+                    Build.Tower t = towers.get(spot);
                     if (t != null) {
-                        build = build.withTower(spot, t.upgraded(intOf(m, "path"), -e.currencyDelta().doubleValue()));
+                        towers.put(spot, t.upgraded(intOf(m, "path"), -e.currencyDelta().doubleValue()));
                     }
-                    return true;
                 }
-                case TOWER_SOLD -> {
-                    build = build.withTower(intOf(meta(e), "spot"), null);
-                    return true;
+                case TOWER_SOLD -> towers.remove(intOf(meta(e), "spot"));
+                case MAP_CHOSEN -> {
+                    GameCatalog.MapDef next = cat.map((String) meta(e).get("map"));
+                    if (next != null) {
+                        map = next;
+                    }
+                    towers.clear(); // the towers were sold just before the move
+                    mapChoices++;
                 }
                 case WAVE_CLEARED, WAVE_FAILED -> {
                     Map<String, Object> m = meta(e);
@@ -113,10 +131,33 @@ public final class GameLedger {
                     return false;
                 }
             }
+            build = makeBuild();
+            return true;
+        }
+
+        /** The open spots of the current map (see the class comment) and its towers. */
+        Build makeBuild() {
+            Set<Integer> open = new TreeSet<>(bought.getOrDefault(map.id(), Set.of()));
+            int want = Math.min(map.spots().size(), map.freeSpots() + spotsBought);
+            for (int i = 0; i < map.spots().size() && open.size() < want; i++) {
+                open.add(i);
+            }
+            return new Build(open, towers);
+        }
+
+        String mapOf(Map<String, Object> m) {
+            Object id = m.get("map");
+            return id == null ? cat.firstMap().id() : id.toString();
         }
 
         State state() {
-            return new State(build, wave, spotsBought, new TreeMap<>(builds), List.copyOf(attempts));
+            Map<Integer, Integer> here = new TreeMap<>();
+            builds.forEach((k, n) -> {
+                if (k.startsWith(map.id() + ":")) {
+                    here.put(Integer.parseInt(k.substring(map.id().length() + 1)), n);
+                }
+            });
+            return new State(map, build, wave, spotsBought, here, List.copyOf(attempts), mapChoices);
         }
     }
 
@@ -130,17 +171,17 @@ public final class GameLedger {
     }
 
     /**
-     * The build and stat levels through time: one snapshot after every event that changed
-     * either. Used by the catch-up to see the game exactly as it was at each scheduled slot.
+     * The map, build and stat levels through time: one snapshot after every event that changed
+     * any of them. Used by the catch-up to see the game exactly as it was at each scheduled slot.
      */
-    public record Snapshot(Instant at, Build build, Map<String, Integer> stats) {}
+    public record Snapshot(Instant at, GameCatalog.MapDef map, Build build, Map<String, Integer> stats) {}
 
-    public static List<Snapshot> timeline(List<LedgerEvent> events, int freeSpots, GameConfig config) {
+    public static List<Snapshot> timeline(List<LedgerEvent> events, GameCatalog cat, GameConfig config) {
         List<Snapshot> out = new ArrayList<>();
-        Folder f = new Folder(freeSpots);
+        Folder f = new Folder(cat);
         Map<String, BigDecimal> totals = new HashMap<>();
         Map<String, Integer> levels = statLevels(totals, config);
-        out.add(new Snapshot(Instant.EPOCH, f.build, levels));
+        out.add(new Snapshot(Instant.EPOCH, f.map, f.build, levels));
         for (LedgerEvent e : events) {
             boolean changed = f.apply(e);
             if (!"{}".equals(e.statSplits())) {
@@ -153,7 +194,7 @@ public final class GameLedger {
                 }
             }
             if (changed) {
-                out.add(new Snapshot(e.occurredAt(), f.build, levels));
+                out.add(new Snapshot(e.occurredAt(), f.map, f.build, levels));
             }
         }
         return out;

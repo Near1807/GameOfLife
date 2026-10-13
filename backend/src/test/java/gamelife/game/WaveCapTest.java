@@ -34,7 +34,7 @@ class WaveCapTest extends IntegrationTest {
         game.build(2, "archer");                   // Monday 10:00
         clock.advance(Duration.ofHours(6));        // 16:00
         waves.sync();
-        var a = GameLedger.derive(ledger.all(), 3).attempts();
+        var a = GameLedger.derive(ledger.all(), GameFixtures.CAT).attempts();
         assertThat(a).hasSize(2);
         assertThat(a.get(0).at()).isEqualTo(at(2026, 3, 2, 11, 0));
         assertThat(a.get(1).at()).isEqualTo(at(2026, 3, 2, 12, 0));
@@ -44,6 +44,6 @@ class WaveCapTest extends IntegrationTest {
         // the next game day starts at 04:00
         setLocal(2026, 3, 3, 4, 30);
         waves.sync();
-        assertThat(GameLedger.derive(ledger.all(), 3).attempts()).hasSize(3);
+        assertThat(GameLedger.derive(ledger.all(), GameFixtures.CAT).attempts()).hasSize(3);
     }
 }

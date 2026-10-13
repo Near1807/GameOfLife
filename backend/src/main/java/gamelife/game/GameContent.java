@@ -35,10 +35,6 @@ public class GameContent {
         return catalog;
     }
 
-    public GameCatalog.MapDef map() {
-        return catalog.firstMap();
-    }
-
     public String rulesHash() {
         return rulesHash;
     }

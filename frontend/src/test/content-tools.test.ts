@@ -130,17 +130,19 @@ describe('content validator: tower-defense data (v4)', () => {
 
   it('rejects a tower with a wrong path, tier, stat or requirement', () => {
     edit('towers.json', (d) => {
-      d.towers[0].paths[0].tiers.pop();
+      d.towers[0].paths[0].tiers.splice(1);
       d.towers[1].paths.pop();
       d.towers[2].paths[0].tiers[0].set = { damage: { mul: 2 } };
       d.towers[3].requires = { stat: 'LUCK', level: 3 };
+      d.towers[5].paths[1].tiers[3].requires = { stat: 'LUCK', level: 10 };
       d.towers.push({ ...d.towers[4] });
     });
     const e = errors();
-    expect(e).toContain('towers.json (archer): path Sniper needs exactly 3 tiers');
+    expect(e).toContain('towers.json (archer): path Sniper needs 3 or 4 tiers');
     expect(e).toContain('towers.json (cannon): needs exactly 2 upgrade paths');
     expect(e).toContain('towers.json (frost): path Deep freeze: unknown stat "damage"');
     expect(e).toContain('towers.json (mage): requires needs a stat id');
+    expect(e).toContain('towers.json (venom): path Toxin: a tier\'s requires needs a stat id');
     expect(e).toContain('duplicate id "tesla"');
   });
 

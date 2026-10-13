@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Castle, Coins, Eye, Heart, Lock, Play, RotateCcw, TrendingUp, X } from 'lucide-react';
+import { Castle, Coins, Eye, Heart, Lock, Map as MapIcon, Play, RotateCcw, TrendingUp, X } from 'lucide-react';
 import { api, type DefenseView, type SpotView, type Watch } from '../api';
 import type { Act } from '../types';
 import { loadSeenAttempt, saveSeenAttempt } from '../seen';
@@ -68,6 +68,8 @@ export function DefenseCard(props: { act: Act; version: number; filter?: string 
         </span>
         {view.discount > 0 && <span className="pill cyan">-{Math.round(view.discount * 100)}% prices</span>}
       </div>
+
+      {view.maps.length > 1 && <MapSwitcher view={view} act={props.act} onMoved={() => setSelected(null)} />}
 
       {away && (
         <div className="away row" role="status">
@@ -152,6 +154,35 @@ function awayText(v: DefenseView): string | null {
   if (won.length > 1) parts.push(`waves ${won[0]} to ${won[won.length - 1]} cleared`);
   if (lost.length > 0) parts.push(`wave ${lost[lost.length - 1].wave} failed`);
   return `While you were away: ${parts.join(', ')}.`;
+}
+
+/**
+ * The maps (chapters). A new map opens when the furthest wave reaches its number. Moving sells every
+ * tower here for exactly what was paid, so it costs nothing: tap the map, then tap again to confirm.
+ */
+function MapSwitcher(props: { view: DefenseView; act: Act; onMoved: () => void }) {
+  const [sure, setSure] = useState<string | null>(null);
+  const refund = props.view.spots.reduce((a, s) => a + (s.tower?.paid ?? 0), 0);
+  return (
+    <div className="map-switch" role="group" aria-label="maps">
+      {props.view.maps.map((m) => {
+        const label = m.active ? `${m.name} · ${m.spots} spots` : !m.unlocked ? `${m.name} · after wave ${m.unlockAfterWave}`
+          : sure === m.id ? `Tap again: move, +${Math.round(refund)} refund` : `Move to ${m.name}`;
+        return (
+          <button key={m.id} className={'chip pill' + (m.active ? ' selected' : '') + (sure === m.id ? ' danger' : '')}
+            disabled={!m.unlocked} aria-pressed={m.active} title={`${m.spots} spots`}
+            onClick={() => {
+              if (m.active) return;
+              if (sure !== m.id) return setSure(m.id);
+              setSure(null);
+              props.act(api.moveMap(m.id)).then(props.onMoved);
+            }}>
+            {m.unlocked ? <MapIcon size={13} /> : <Lock size={13} />} {label}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 function StatusLine(props: { view: DefenseView; now: number }) {
@@ -242,12 +273,13 @@ function SpotPanel(props: { view: DefenseView; spot: SpotView; act: Act; onClose
       {tw.a + tw.b === 0 && <p className="tiny faint">Choosing a path locks the other. Sell the tower to choose again.</p>}
       <div className="opt-list">
         {tw.paths.map((p, i) => (
-          <button key={p.name} className="opt" disabled={p.locked || p.price === null || balance < (p.price ?? 0)}
+          <button key={p.name} className="opt" disabled={p.locked || !!p.needs || p.price === null || balance < (p.price ?? 0)}
             onClick={() => act(api.upgradeTower(spot.index, i, p.tier + 1))}>
-            <span className="pips" aria-label={`${p.tier} of 3`}>{[0, 1, 2].map((k) => (k < p.tier ? '●' : '○')).join('')}</span>
+            <span className="pips" aria-label={`${p.tier} of ${p.tiers.length}`}>{p.tiers.map((_, k) => (k < p.tier ? '●' : '○')).join('')}</span>
             <span className="grow">
               {p.name}
               <small>{p.locked ? 'Locked: you chose the other path' : p.next ?? 'Path complete'}</small>
+              {p.needs && !p.locked && <small style={{ color: 'var(--violet-soft)' }}><Lock size={10} /> {p.needs}</small>}
             </span>
             <span className="price num">{p.price ?? ''}</span>
           </button>

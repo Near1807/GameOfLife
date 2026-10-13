@@ -25,7 +25,7 @@ class WaveScheduleTest extends IntegrationTest {
     }
 
     private List<GameLedger.Attempt> attempts() {
-        return GameLedger.derive(ledger.all(), 3).attempts();
+        return GameLedger.derive(ledger.all(), GameFixtures.CAT).attempts();
     }
 
     @Test

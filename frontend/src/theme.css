@@ -687,3 +687,6 @@ button { -webkit-user-select: none; user-select: none; }
 }
 .spot-hit:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 .away { gap: 8px; padding: 8px 10px; margin-bottom: 10px; border-radius: var(--radius-sm); background: var(--gold-soft); border: 1px solid rgba(251, 191, 36, 0.35); }
+.map-switch { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.map-switch .chip { min-height: 36px; font-size: 13px; }
+.map-switch .chip.danger { border-color: rgba(251, 191, 36, 0.6); background: var(--gold-soft); color: var(--gold); }

@@ -29,8 +29,15 @@ public class GameViewService {
         this.waves = waves;
     }
 
-    /** One upgrade path of a tower on the map. price is null when nothing is left to buy or it is locked. */
-    public record PathView(String name, int tier, boolean locked, Integer price, String next, List<String> tiers) {}
+    /**
+     * One upgrade path of a tower on the map. price is null when nothing is left to buy or it is locked.
+     * needs: the stat level the next tier requires and the player lacks (tier 4), or null.
+     */
+    public record PathView(String name, int tier, boolean locked, Integer price, String next, List<String> tiers,
+                           String needs) {}
+
+    /** A map of the chapter list. unlocked: the furthest wave has reached unlockAfterWave. */
+    public record MapChoice(String id, String name, int spots, int unlockAfterWave, boolean unlocked, boolean active) {}
 
     public record TowerView(String type, String name, String kind, String role, String color, String shape, int a,
                             int b, double paid, Map<String, Object> stats, List<PathView> paths) {}
@@ -51,7 +58,7 @@ public class GameViewService {
                            int livesMax, String status, Instant nextAt, int attemptsToday, int maxAttemptsPerDay,
                            double balance, double incomeMultiplier, double discount, int nextSpotCost,
                            AttemptView last, List<AttemptView> recent, Map<String, EnemyView> enemies,
-                           Map<String, Integer> stats, List<StatEffect> statEffects) {}
+                           Map<String, Integer> stats, List<StatEffect> statEffects, List<MapChoice> maps) {}
 
     /** What a stat does in the game (hero screen): its bonus now and the towers it unlocks. */
     public record StatEffect(String stat, String boosts, String now, List<String> unlocks) {}
@@ -62,14 +69,14 @@ public class GameViewService {
         GameService.Context c = game.context(events);
         WaveService.Status status = waves.status(events);
         GameCatalog cat = content.catalog();
-        GameCatalog.MapDef map = content.map();
+        GameCatalog.MapDef map = c.state().map();
         Build build = c.state().build();
 
         List<SpotView> spots = new ArrayList<>();
         for (int i = 0; i < map.spots().size(); i++) {
             Build.Tower t = build.towers().get(i);
             spots.add(new SpotView(i, map.spots().get(i)[0], map.spots().get(i)[1], build.openSpots().contains(i),
-                    t == null ? null : tower(i, t, build, c)));
+                    t == null ? null : tower(i, t, map, build, c)));
         }
         List<TowerOption> options = new ArrayList<>();
         for (GameCatalog.TowerDef d : cat.towers().values()) {
@@ -91,7 +98,9 @@ public class GameViewService {
                 status.status(), status.nextAt(), status.attemptsToday(), config.game().maxAttemptsPerDay(),
                 c.balance(), round2(c.income()), round2(c.discount()),
                 GameMath.spotCost(c.state().spotsBought(), config.game()),
-                recent.isEmpty() ? null : recent.get(0), recent, enemies, c.stats(), statEffects(c.stats()));
+                recent.isEmpty() ? null : recent.get(0), recent, enemies, c.stats(), statEffects(c.stats()),
+                cat.maps().stream().map(m -> new MapChoice(m.id(), m.name(), m.spots().size(), m.unlockAfterWave(),
+                        GameService.unlocked(m, c.state()), m.id().equals(map.id()))).toList());
     }
 
     List<StatEffect> statEffects(Map<String, Integer> stats) {
@@ -117,9 +126,15 @@ public class GameViewService {
                         "-" + pct0(Math.min(g.maxCreativityDiscount(), g.creativityDiscountPerLevel() * b))};
                 default -> new String[]{"", ""};
             };
-            List<String> unlocks = content.catalog().towers().values().stream()
+            List<String> unlocks = new ArrayList<>(content.catalog().towers().values().stream()
                     .filter(d -> d.requires() != null && d.requires().stat().equals(st.id()))
-                    .map(d -> d.name() + " at level " + d.requires().level()).toList();
+                    .map(d -> d.name() + " at level " + d.requires().level()).toList());
+            // tier 4 of the paths, grouped by tower ("Mage tier 4 at level 10")
+            for (GameCatalog.TowerDef d : content.catalog().towers().values()) {
+                d.paths().stream().flatMap(pth -> pth.tiers().stream()).map(GameCatalog.Tier::requires)
+                        .filter(r -> r != null && r.stat().equals(st.id())).map(GameCatalog.Requirement::level)
+                        .distinct().forEach(l -> unlocks.add(d.name() + " tier 4 at level " + l));
+            }
             out.add(new StatEffect(st.id(), e[0], b == 0 ? "none yet" : e[1], unlocks));
         }
         return out;
@@ -134,19 +149,22 @@ public class GameViewService {
         return pct(v).substring(1);
     }
 
-    private TowerView tower(int spot, Build.Tower t, Build build, GameService.Context c) {
+    private TowerView tower(int spot, Build.Tower t, GameCatalog.MapDef map, Build build, GameService.Context c) {
         GameCatalog.TowerDef def = content.catalog().tower(t.type());
-        TowerStats s = GameMath.effective(spot, build, content.catalog(), content.map(), c.stats(), config.game());
+        TowerStats s = GameMath.effective(spot, build, content.catalog(), map, c.stats(), config.game());
         List<PathView> paths = new ArrayList<>();
         for (int p = 0; p < def.paths().size(); p++) {
             GameCatalog.UpgradePath path = def.paths().get(p);
             boolean locked = t.chosenPath() >= 0 && t.chosenPath() != p;
             int tier = t.tier(p);
             boolean more = tier < path.tiers().size();
+            GameCatalog.Requirement req = more ? path.tiers().get(tier).requires() : null;
+            String needs = req != null && GameMath.level(c.stats(), req.stat()) < req.level()
+                    ? "Needs " + game.statName(req.stat()) + " " + req.level() : null;
             paths.add(new PathView(path.name(), tier, locked,
                     !locked && more ? GameMath.price(path.tiers().get(tier).cost(), c.discount()) : null,
                     more ? path.tiers().get(tier).description() : null,
-                    path.tiers().stream().map(GameCatalog.Tier::description).toList()));
+                    path.tiers().stream().map(GameCatalog.Tier::description).toList(), needs));
         }
         return new TowerView(t.type(), def.name(), def.kind(), def.role(), def.color(), def.shape(), t.a(), t.b(),
                 t.paid(), s.summary(), paths);

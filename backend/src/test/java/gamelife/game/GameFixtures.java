@@ -40,6 +40,16 @@ final class GameFixtures {
         return Simulator.simulate(MAP, b, stats, wave, CAT, G, true);
     }
 
+    /** Like build(), on another map: all its spots open. */
+    static Build buildOn(GameCatalog.MapDef map, Object... spotTypeAB) {
+        Build b = Build.empty(map.spots().size());
+        for (int i = 0; i < spotTypeAB.length; i += 4) {
+            b = b.withTower((Integer) spotTypeAB[i], new Build.Tower((String) spotTypeAB[i + 1],
+                    (Integer) spotTypeAB[i + 2], (Integer) spotTypeAB[i + 3], 0));
+        }
+        return b;
+    }
+
     /** The shipped "game" config with some numbers changed. */
     static GameConfig.Game game(Map<String, Object> changes) {
         try {

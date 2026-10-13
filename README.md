@@ -5,11 +5,12 @@ feed one append-only XP ledger. Real work produces coins and stat levels; the co
 tower-defense game that plays itself every two hours on the server. A modern dark sci-fi
 interface; the map is vector art, the hero is pixel art.
 
-**Status: version 4.** The boss fight is replaced by a deterministic tower-defense game: 8 towers
-with two upgrade paths each, 15 spots, automatic waves with catch-up, replays, Markets that raise
-real earnings, stats that power the towers. Cosmetic shop, 39 achievements, pacing simulation,
-content validator, PWA. See `DECISIONS.md` for every default and assumption, `docs/DEMO.md` for
-what to try, `docs/PACING.md` for the simulation, and `docs/screenshots/v4/` for how it looks.
+**Status: version 4.1.** The boss fight is replaced by a deterministic tower-defense game: 8
+towers with two upgrade paths of four tiers each, three maps that open as you progress, automatic
+waves with catch-up, replays, Markets that raise real earnings, stats that power the towers.
+Cosmetic shop, 39 achievements, pacing simulation, content validator, PWA. See `DECISIONS.md` for
+every default and assumption, `docs/DEMO.md` for what to try, `docs/PACING.md` for the simulation,
+and `docs/screenshots/v4/` and `v4.1/` for how it looks.
 
 ## Requirements
 
@@ -71,12 +72,14 @@ The results and the tuning that was applied are in `docs/PACING.md`.
 - **Real work pays coins.** Every validated action pays XP as before. The coins it pays are
   XP x your income bonus (Markets on the map and your Social level). Nothing in the game ever
   creates coins or XP.
-- **The map.** One path, 15 tower spots: 3 open, the others bought for 150, 218, 315... coins
-  (permanent). Tap a spot to build, tap a tower to upgrade or sell.
+- **The maps.** Each map is a path with tower spots: 3 open, the others bought for 150, 195,
+  254... coins (permanent). Tap a spot to build, tap a tower to upgrade or sell. Map 2 (22 spots)
+  opens at wave 30 and map 3 (30 spots) at wave 60: moving there sells your towers for a full
+  refund, the wave count carries on, and as many spots are open as you had bought.
 - **Towers.** Archer, Cannon, Frost, Mage, Tesla, Venom, Banner (buffs towers in range) and
   Market (no attack: +coins on real actions, or cheaper towers with the Bargain path). Each has two
-  paths of three tiers; the first upgrade picks a path for good. Selling refunds everything you
-  paid for that tower.
+  paths of four tiers; the first upgrade picks a path for good, and tier 4 needs a stat at level 10
+  (Tesla: Intellect 12). Selling refunds everything you paid for that tower.
 - **Stats power the towers.** Strength: physical damage. Intellect: magic damage. Discipline:
   fire rate. Spirit: slows. Vitality: lives. Social: income. Creativity: cheaper towers. Some
   towers need a stat level (the Hero screen lists them).
@@ -110,9 +113,9 @@ rebuild are needed. A bad file never crashes the app: it is skipped and listed u
 
 | What | Where | Size | Name |
 | --- | --- | --- | --- |
-| Tower | `content/towers.json` | (none) | one entry: id, name, kind, role, cost, requires, base stats, 2 paths x 3 tiers |
+| Tower | `content/towers.json` | (none) | one entry: id, name, kind, role, cost, requires, base stats, 2 paths x 3 or 4 tiers (a tier may have its own `requires`) |
 | Enemy and waves | `content/waves.json` | (none) | enemy types and wave groups |
-| Map | `content/maps/` | (none) | `map_NN.json`: path points, base, spots, free spots |
+| Map | `content/maps/` | (none) | `map_NN.json`: path points, base, spots (in opening order), free spots, `unlockAfterWave` |
 | Hero look | `content/hero/` | 32×32, or a 4-frame strip (128×32) | `hero_NN.png`, optional `hero_NN.json` `{"name": "..."}` |
 | Shop look | `content/items/` | 32×32 (outfits: 128×32 strip) | `NAME.png` + `NAME.json` |
 | Theme | `content/themes/` | (none) | `NAME.json` (+ optional `NAME.png` preview) |

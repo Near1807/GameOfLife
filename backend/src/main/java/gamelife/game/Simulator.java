@@ -86,13 +86,19 @@ public final class Simulator {
         final int spot;
         final double x, y;
         final TowerStats s;
+        /**
+         * Stretches of the path [from, to, from, to...] (distance along it) that can be in range,
+         * the one nearest the base first.
+         */
+        final double[] reach;
         double cd;
 
-        Gun(int spot, double[] p, TowerStats s) {
+        Gun(int spot, double[] p, TowerStats s, PathGeometry path) {
             this.spot = spot;
             this.x = p[0];
             this.y = p[1];
             this.s = s;
+            this.reach = path.stretchesNear(x, y, s.range + 2);
         }
     }
 
@@ -110,7 +116,7 @@ public final class Simulator {
         final List<Spawn> queue;
         final List<Gun> guns = new ArrayList<>();
         final List<Enemy> enemies = new ArrayList<>();
-        final Map<Integer, Double> damage = new TreeMap<>();
+        final double[] damage; // per spot, turned into a map at the end
         final boolean withReplay;
         final int livesMax;
         final int sampleEvery;
@@ -129,13 +135,14 @@ public final class Simulator {
             this.withReplay = withReplay;
             this.path = new PathGeometry(map.path());
             this.queue = makeWave(wave, cat, g);
+            this.damage = new double[map.spots().size()];
             this.livesMax = GameMath.livesMax(stats, g);
             this.lives = livesMax;
             this.sampleEvery = Math.max(1, (int) Math.round(1 / DT / Math.max(1, g.replayFps())));
             for (var e : build.towers().entrySet()) {
                 if ("attack".equals(cat.tower(e.getValue().type()).role())) {
                     guns.add(new Gun(e.getKey(), map.spots().get(e.getKey()),
-                            GameMath.effective(e.getKey(), build, cat, map, stats, g)));
+                            GameMath.effective(e.getKey(), build, cat, map, stats, g), path));
                 }
             }
         }
@@ -155,7 +162,7 @@ public final class Simulator {
                 }
             }
             return new Result(wave, won, Math.max(0, lives), livesMax, queue.size(), killed, leaked,
-                    Math.round(t * 100) / 100.0, damage,
+                    Math.round(t * 100) / 100.0, damageBySpot(),
                     withReplay ? new Replay(Math.max(1, g.replayFps()), types, frames) : null);
         }
 
@@ -168,6 +175,7 @@ public final class Simulator {
                 types.add(s.type());
                 place(e);
                 enemies.add(e);
+                membersChanged = true;
             }
             for (int i = enemies.size() - 1; i >= 0; i--) {
                 Enemy e = enemies.get(i);
@@ -189,35 +197,32 @@ public final class Simulator {
                 if (e.hp <= 0) {
                     die(e);
                     enemies.remove(i);
+                    membersChanged = true;
                     continue;
                 }
                 if (e.d >= path.total) {
                     lives -= e.def.leak();
                     leaked++;
                     enemies.remove(i);
+                    membersChanged = true;
                 }
             }
+            byD = null; // sorted on demand, once per step
             for (Gun gun : guns) {
                 gun.cd -= DT;
                 if (gun.cd > 0) {
                     continue;
                 }
-                List<Enemy> cand = new ArrayList<>();
-                for (Enemy e : enemies) {
-                    // enemies already at 0 HP are left alone (they are removed on the next step)
-                    if (e.hp > 0 && (gun.s.air || !e.def.air())
-                            && Math.hypot(e.x - gun.x, e.y - gun.y) <= gun.s.range) {
-                        cand.add(e);
-                    }
+                if (byD == null) {
+                    sortByDistance();
                 }
+                List<Enemy> cand = targets(gun);
                 if (cand.isEmpty()) {
                     continue;
                 }
-                // furthest along the path first; ties by the older enemy, so the order is fixed
-                cand.sort(Comparator.comparingDouble((Enemy e) -> -e.d).thenComparingInt(e -> e.id));
                 gun.cd = 1 / gun.s.rate;
-                for (int m = 0; m < Math.min((int) gun.s.multi, cand.size()); m++) {
-                    hit(gun, cand.get(m));
+                for (Enemy target : cand) {
+                    hit(gun, target);
                 }
             }
             if (lives <= 0) {
@@ -229,16 +234,76 @@ public final class Simulator {
             return null;
         }
 
+        /**
+         * dx² + dy² <= r²: the distance test without a square root (Math.hypot is slow and this runs
+         * millions of times per wave).
+         */
+        static boolean within(double dx, double dy, double r) {
+            return dx * dx + dy * dy <= r * r;
+        }
+
+        /** Furthest along the path first; ties by the older enemy, so the order is fixed. */
+        static final Comparator<Enemy> TARGET_ORDER =
+                Comparator.comparingDouble((Enemy e) -> -e.d).thenComparingInt(e -> e.id);
+
+        Enemy[] byD;
+        Enemy[] sorted = new Enemy[0];   // kept between steps: nearly in order, so re-sorting is cheap
+        boolean membersChanged = true;
+
+        void sortByDistance() {
+            if (membersChanged) {
+                sorted = enemies.toArray(new Enemy[0]);
+                membersChanged = false;
+            }
+            java.util.Arrays.sort(sorted, TARGET_ORDER);
+            byD = sorted;
+        }
+
+        /**
+         * The first `multi` enemies in target order that the gun can hit (alive, air rule, in range).
+         * Only the stretches of path near the gun are searched (binary search in byD); the exact range
+         * test decides. Same answer as testing every enemy, much faster.
+         */
+        List<Enemy> targets(Gun gun) {
+            List<Enemy> out = new ArrayList<>();
+            int want = (int) gun.s.multi;
+            for (int k = 0; k < gun.reach.length && out.size() < want; k += 2) {
+                double from = gun.reach[k], to = gun.reach[k + 1];
+                int lo = 0, hi = byD.length; // first index with d <= to (byD is by d, descending)
+                while (lo < hi) {
+                    int mid = (lo + hi) >>> 1;
+                    if (byD[mid].d > to) lo = mid + 1; else hi = mid;
+                }
+                for (int i = lo; i < byD.length && byD[i].d >= from && out.size() < want; i++) {
+                    Enemy e = byD[i];
+                    // enemies already at 0 HP are left alone (they are removed on the next step)
+                    if (e.hp > 0 && (gun.s.air || !e.def.air()) && within(e.x - gun.x, e.y - gun.y, gun.s.range)) {
+                        out.add(e);
+                    }
+                }
+            }
+            return out;
+        }
+
         void place(Enemy e) {
-            double[] p = path.at(e.d);
-            e.x = p[0];
-            e.y = p[1];
+            path.place(e);
+        }
+
+        /** Damage per spot, only for spots with a tower that dealt some (as before: a sorted map). */
+        Map<Integer, Double> damageBySpot() {
+            Map<Integer, Double> out = new TreeMap<>();
+            for (Gun gun : guns) {
+                if (damage[gun.spot] != 0) {
+                    out.put(gun.spot, damage[gun.spot]);
+                }
+            }
+            return out;
         }
 
         void hurt(Enemy e, double amount, int spot) {
             e.hp -= amount;
             if (spot >= 0) {
-                damage.merge(spot, amount, Double::sum);
+                damage[spot] += amount;
             }
         }
 
@@ -255,7 +320,7 @@ public final class Simulator {
             }
             if (e.poisT > 0 && e.spread) {
                 for (Enemy o : enemies) {
-                    if (o != e && Math.hypot(o.x - e.x, o.y - e.y) <= g.poisonSpreadRange()) {
+                    if (o != e && within(o.x - e.x, o.y - e.y, g.poisonSpreadRange())) {
                         o.pois = Math.max(o.pois, e.pois);
                         o.poisT = 4;
                         o.spread = true;
@@ -270,7 +335,7 @@ public final class Simulator {
             List<Enemy> targets = new ArrayList<>();
             if (s.rad > 0) {
                 for (Enemy o : enemies) {
-                    if (o.hp > 0 && (s.air || !o.def.air()) && Math.hypot(o.x - e.x, o.y - e.y) <= s.rad) {
+                    if (o.hp > 0 && (s.air || !o.def.air()) && within(o.x - e.x, o.y - e.y, s.rad)) {
                         targets.add(o);
                     }
                 }
@@ -304,12 +369,12 @@ public final class Simulator {
                 List<Enemy> done = new ArrayList<>(List.of(e));
                 for (int c = 0; c < (int) s.chain; c++) {
                     Enemy nb = null;
-                    double nd = g.chainRange();
+                    double nd = g.chainRange() * g.chainRange(); // squared distances
                     for (Enemy o : enemies) {
                         if (done.contains(o) || o.hp <= 0 || (!s.air && o.def.air())) {
                             continue;
                         }
-                        double dd = Math.hypot(o.x - cur.x, o.y - cur.y);
+                        double dd = (o.x - cur.x) * (o.x - cur.x) + (o.y - cur.y) * (o.y - cur.y);
                         if (dd < nd) {
                             nd = dd;
                             nb = o;
@@ -367,6 +432,61 @@ public final class Simulator {
                 sum += len[i];
             }
             total = sum;
+        }
+
+        /**
+         * The stretches of the path within r of (x, y), as distances along the path. The first and
+         * last segments are open-ended (enemies start before 0 and are placed at the end after it).
+         */
+        double[] stretchesNear(double x, double y, double r) {
+            List<Double> out = new ArrayList<>();
+            for (int i = 0; i < a.length; i++) {
+                double ux = (b[i][0] - a[i][0]) / len[i], uy = (b[i][1] - a[i][1]) / len[i];
+                double t0 = (x - a[i][0]) * ux + (y - a[i][1]) * uy;
+                double h2 = (x - a[i][0]) * (x - a[i][0]) + (y - a[i][1]) * (y - a[i][1]) - t0 * t0;
+                if (h2 > r * r) {
+                    continue;
+                }
+                double half = Math.sqrt(r * r - Math.max(0, h2));
+                double from = Math.max(0, t0 - half), to = Math.min(len[i], t0 + half);
+                if (i == 0 && t0 - half < 0) from = Double.NEGATIVE_INFINITY;
+                if (i == a.length - 1 && t0 + half > len[i]) to = Double.POSITIVE_INFINITY;
+                if (from <= to) {
+                    out.add(start[i] + from);
+                    out.add(start[i] + to);
+                }
+            }
+            // merge touching stretches (around a corner), then list them from the base backwards
+            List<double[]> merged = new ArrayList<>();
+            for (int i = 0; i < out.size(); i += 2) {
+                double from = out.get(i), to = out.get(i + 1);
+                double[] last = merged.isEmpty() ? null : merged.get(merged.size() - 1);
+                if (last != null && from <= last[1]) {
+                    last[1] = Math.max(last[1], to);
+                } else {
+                    merged.add(new double[]{from, to});
+                }
+            }
+            double[] arr = new double[merged.size() * 2];
+            for (int i = 0; i < merged.size(); i++) {
+                double[] m = merged.get(merged.size() - 1 - i);
+                arr[2 * i] = m[0];
+                arr[2 * i + 1] = m[1];
+            }
+            return arr;
+        }
+
+        /** Sets the enemy's x and y for its distance travelled (the same maths as at(), no allocation). */
+        void place(Enemy e) {
+            double d = e.d;
+            for (int i = 0; i < a.length; i++) {
+                if (d <= start[i] + len[i] || i == a.length - 1) {
+                    double f = Math.min(1, Math.max(0, (d - start[i]) / len[i]));
+                    e.x = a[i][0] + (b[i][0] - a[i][0]) * f;
+                    e.y = a[i][1] + (b[i][1] - a[i][1]) * f;
+                    return;
+                }
+            }
         }
 
         double[] at(double d) {

@@ -35,7 +35,9 @@ public enum EventType {
     /** An attempt of a wave that was won (no XP, no currency). */
     WAVE_CLEARED,
     /** An attempt of a wave that was lost (no XP, no currency). */
-    WAVE_FAILED;
+    WAVE_FAILED,
+    /** The player moved to another map (no XP, no currency; the towers were sold just before). */
+    MAP_CHOSEN;
 
     /** Events that are a "validated action": they make a day count for the streak (brief 7). */
     public static final Set<EventType> VALIDATIONS = Set.of(TASK_DONE, TIMER_VALIDATED, HABIT_DONE, CHECKIN);
