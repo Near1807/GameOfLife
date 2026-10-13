@@ -28,10 +28,14 @@ function appEnv(env) {
   return out;
 }
 
-/** verbose: Chromium logs every URL its network layer sees, including its own background requests. */
-function launch(env, verbose = false) {
+/**
+ * netLog: Chromium writes every URL its network layer sees, its own background requests included, to
+ * this file. A file, not stderr: on Windows, Playwright starts Electron through cmd.exe and the GUI
+ * app's stderr log never reached the test.
+ */
+function launch(env, netLog = null) {
   const { _electron } = require('playwright-core');
-  const log = verbose ? ['--enable-logging=stderr', '--v=1'] : [];
+  const log = netLog ? ['--enable-logging=file', `--log-file=${netLog}`, '--v=1'] : [];
   return _electron.launch({ executablePath: electronPath, args: [...extra, ...log, appDir], env: appEnv(env), timeout: 60000 });
 }
 
@@ -46,12 +50,9 @@ function canConnect(port) {
 
 test('the shell opens the app on a local port, stays single, and stops the server on exit', { skip, timeout: Number(process.env.E2E_TIMEOUT || 240000) }, async (t) => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gamelife-e2e-'));
-  const app = await launch({ GAMELIFE_DATA_DIR: dataDir }, true);
+  const netLog = path.join(dataDir, 'chromium-net.log');
+  const app = await launch({ GAMELIFE_DATA_DIR: dataDir }, netLog);
   t.after(() => app.close().catch(() => {}));   // even when an assertion fails, never leave the app running
-  const network = [];
-  app.process().stderr.on('data', (d) => {
-    for (const m of String(d).matchAll(/NotifyBeforeURLRequest: (\S+)/g)) network.push(m[1]);
-  });
   const win = await app.firstWindow();
   await win.waitForURL(/^http:\/\/127\.0\.0\.1:\d+\/$/, { timeout: 120000 });
   await win.waitForSelector('nav');
@@ -91,6 +92,8 @@ test('the shell opens the app on a local port, stays single, and stops the serve
   assert.ok(backups.some((f) => f.endsWith('-exit.json')), `exit backup: ${backups}`);
 
   // not one request left this computer, Chromium's own included (desktop brief 2)
+  const logText = fs.existsSync(netLog) ? fs.readFileSync(netLog, 'utf8') : '';
+  const network = [...logText.matchAll(/NotifyBeforeURLRequest: (\S+)/g)].map((m) => m[1]);
   assert.ok(network.length > 5, `network log seen: ${network.length}`);
   const outside = network.filter((u) => /^https?:/.test(u) && !/^https?:\/\/(127\.0\.0\.1|localhost)[:/]/.test(u))
     .filter((u) => u !== 'https://example.com/'); // the test's own request above, which the shell cancelled
