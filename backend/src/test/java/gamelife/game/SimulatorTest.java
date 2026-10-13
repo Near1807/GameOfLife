@@ -31,14 +31,14 @@ class SimulatorTest {
     /** won, lives left, killed, leaked, seconds: fixed numbers for 3 builds on waves 1, 5 and 10. */
     @Test
     void goldenResults() {
-        golden(THREE_ARCHERS, 1, true, 11, 6, 0, 7.62);
+        golden(THREE_ARCHERS, 1, true, 11, 6, 0, 8.88);
         golden(THREE_ARCHERS, 5, true, 1, 8, 10, 49.7);
-        golden(THREE_ARCHERS, 10, false, 0, 4, 11, 35.12);
+        golden(THREE_ARCHERS, 10, false, 0, 6, 11, 35.67);
         golden(MIXED, 1, true, 11, 6, 0, 4.28);
-        golden(MIXED, 5, true, 11, 18, 0, 20.03);
-        golden(MIXED, 10, false, 0, 21, 11, 47.18);
+        golden(MIXED, 5, true, 11, 18, 0, 19.58);
+        golden(MIXED, 10, true, 3, 30, 4, 95.15);
         golden(ADVANCED, 1, true, 11, 6, 0, 4.4);
-        golden(ADVANCED, 5, true, 11, 18, 0, 17.22);
+        golden(ADVANCED, 5, true, 11, 18, 0, 16.07);
         golden(ADVANCED, 10, true, 6, 33, 1, 88.98);
     }
 
@@ -63,8 +63,8 @@ class SimulatorTest {
         assertEquals(1, w10.stream().filter(s -> s.type().equals("boss")).count());
         assertEquals(4, w10.stream().filter(s -> s.type().equals("warded")).count());
         assertEquals(5, w10.stream().filter(s -> s.type().equals("flyer")).count());
-        // HP: 24 x 1.15^(n-1) x the type's multiplier
-        assertEquals(24 * Math.pow(1.15, 9) * 25, w10.get(w10.size() - 1).hp(), 1e-9);
+        // HP: enemyBaseHp x enemyHpGrowth^(n-1) x the type's multiplier
+        assertEquals(G.enemyBaseHp() * Math.pow(G.enemyHpGrowth(), 9) * 25, w10.get(w10.size() - 1).hp(), 1e-9);
     }
 
     @Test

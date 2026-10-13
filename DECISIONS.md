@@ -68,6 +68,17 @@ armour levels, charms, pause, ascension and defeat modes no longer applies.
     confirmation. A double tap is harmless: build answers "Already built", upgrade sends the tier
     it saw (key `...:path0:tier2`), sell answers "Already sold".
 
+16. **Tuning (brief 6).** Three numbers changed from the brief, for the reasons and results in
+    `docs/PACING.md`: `game.enemyHpGrowth` 1.15 → **1.10**, `game.spotCostGrowth` 1.45 → **1.80**,
+    Archer base damage 12 → **10**. With them every profile progresses and keeps buying all year.
+    The "strong reaches twice the waves of lazy" target holds in the first month only: one map has a
+    ceiling and waves follow the logarithm of power. `docs/PACING.md` lists three ways to fix this
+    (more maps, linear HP growth, stronger stat bonuses) for you to choose.
+17. **The pacing simulation's player** spends greedily: each day it buys whatever improves the
+    current wave most per coin (tried with the real simulation), buys a Market when it pays back
+    within 40 days (at most one per five open spots), and opens a spot only when no tower or tier
+    helps and every open spot is taken. Stat XP is split equally over the seven stats.
+
 ### Where things are
 
 - Data: `content/towers.json` (8 towers, 2 paths x 3 tiers each, changes as `mul`/`add`/`set`),

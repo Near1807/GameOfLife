@@ -11,7 +11,7 @@
       "shape": "dot",
       "requires": null,
       "base": {
-        "dmg": 12,
+        "dmg": 10,
         "rate": 1.1,
         "range": 125,
         "rad": 0,

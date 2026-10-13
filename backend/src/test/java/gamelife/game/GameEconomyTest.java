@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class GameEconomyTest extends IntegrationTest {
     @Autowired GameService game;
     @Autowired TaskService tasks;
+    @Autowired gamelife.config.GameConfig config;
 
     private void earn(int minutes, String... tags) {
         tasks.tick(tasks.create("Earn " + minutes + " " + clock.instant() + List.of(tags), minutes, List.of(tags)).id());
@@ -73,18 +74,19 @@ class GameEconomyTest extends IntegrationTest {
 
     @Test
     void spotCostsFollowTheFormula() {
-        earn(1000);
+        earn(1200);
         assertThatThrownBy(() -> game.build(3, "archer")).hasMessageContaining("Unlock this spot first");
         assertThatThrownBy(() -> game.unlock(0)).hasMessageContaining("already open");
         double c0 = coins();
-        game.unlock(3);                            // 150 x 1.45^0
+        game.unlock(3);                            // spotBaseCost x spotCostGrowth^0
         double c1 = coins();
-        game.unlock(7);                            // 150 x 1.45^1 = 217.5 -> 218
+        game.unlock(7);                            // ... ^1
         double c2 = coins();
-        game.unlock(4);                            // 150 x 1.45^2 = 315.4 -> 315
+        game.unlock(4);                            // ... ^2
+        double g = config.game().spotCostGrowth();
         assertThat(c0 - c1).isEqualTo(150);
-        assertThat(c1 - c2).isEqualTo(218);
-        assertThat(c2 - coins()).isEqualTo(315);
+        assertThat(c1 - c2).isEqualTo(Math.round(150 * g));
+        assertThat(c2 - coins()).isEqualTo(Math.round(150 * g * g));
         assertThat(game.unlock(3).paid()).isFalse();
         assertThat(game.build(3, "archer").paid()).isTrue();
     }
