@@ -4,6 +4,63 @@ Every assumption and default applied while building GameLife. Section numbers re
 brief; "v2" refers to the version 2 upgrade request, which wins where the two disagree. Numbers
 are in `config/gamelife.json`, rules are in the file named next to them.
 
+## Windows desktop app
+
+1. **Shape.** `desktop/` is an Electron 44.4.5 shell around the unchanged Spring Boot server and
+   frontend; electron-builder 26.16.1 makes the installer. The browser version (`npm start`) is
+   untouched; the shell only adds startup arguments.
+2. **Server process.** Started with the bundled jlink runtime (`desktop/scripts/make-runtime.mjs`,
+   22 modules, about 50 to 60 MB) on a free port chosen by the OS, with
+   `--server.address=127.0.0.1`. The window opens `http://127.0.0.1:<port>/` once `/api/meta`
+   answers (up to 90 s), with a "Starting…" page meanwhile.
+3. **Clean stop.** On exit the shell posts to `POST /api/system/shutdown` with a random token given
+   through an environment variable (not the command line, which other programs can read). The server
+   closes normally: the exit backup is written and SQLite is closed. After 20 s without stopping it
+   is killed. The endpoint does not exist without a token (browser version).
+4. **Orphan guard.** The shell passes its process id; if that process disappears without stopping
+   the server (crash, Task Manager), the server stops itself cleanly within 2 seconds
+   (`ParentWatch`). Without it, a crashed shell would leave Java running and holding the database.
+5. **Offline.** Fonts and icons were already bundled (fontsource, lucide). The shell refuses every
+   request that is not to 127.0.0.1 or a local file, for every session from its creation, and turns
+   off Chromium's own background traffic (component updates, pings, domain reliability, field
+   trials). Testing found one real leak: on Linux the spell checker downloads a dictionary from
+   `redirector.gvt1.com` before any app code runs. It is now disabled at session creation (spell
+   checking off, no languages, download URL pointed at 127.0.0.1). On Windows Electron uses the
+   system spell checker, which downloads nothing. The service worker no longer answers for other
+   origins either (it used to return its offline page for any failed GET, which made a blocked
+   request look successful).
+6. **Data folder** `%APPDATA%\GameLife` (Electron's `appData` + "GameLife"), checked at start to
+   be outside the install folder (refuses to start otherwise). Chromium's cache goes to its
+   `electron` subfolder. Development (`npm run desktop`) uses `%APPDATA%\GameLife-dev`; tests use
+   `GAMELIFE_DATA_DIR`. The uninstaller keeps the data (`deleteAppDataOnUninstall: false`).
+7. **Config on update.** The installed defaults are merged into your `gamelife.json` at every
+   start with a three-way merge against the defaults it was last merged with
+   (`gamelife.defaults.json`): untouched numbers follow updates, numbers you changed are kept.
+   Without this, the first copy of the config would freeze the numbers forever (retunes would never
+   reach you), or an update would overwrite your edits.
+8. **Content** stays in the install folder (it is part of the program and updates with it).
+   "Adding content" by dropping files is a development feature; in the installed app those files
+   would be replaced by the next update.
+9. **Automatic backups** (`AutoBackupService`): at every clean stop (`ContextClosedEvent`, which
+   covers the shell's exit and Ctrl+C in the browser version), and when the newest backup is 24 h
+   old (checked hourly). Files are named by their time (UTC); rotation keeps the 14 newest plus the
+   newest of each of the 8 most recent calendar weeks (Monday to Sunday, UTC, counting the current
+   one). Every backup is read back and its chain verified; Settings shows each file's check. A
+   restore re-verifies, saves a "before-restore" backup first, then replaces the data in one
+   transaction. The backup folder is in `settings.json` in the data folder (a setting of this
+   computer, not game data). The Home warning appears when the newest backup is more than 3 days
+   old, or there is none.
+10. **Start with Windows** uses Electron's `setLoginItemSettings` (the per-user Run key), off by
+    default; the switch shows the real state read back from Windows.
+11. **Startup catch-up.** The exact lazy catch-up already ran on every read; it now also runs as
+    soon as the server is ready and every 10 minutes, so a window left open in the background keeps
+    its waves up to date.
+12. **Installer.** NSIS one-click, per-user (`perMachine: false`, no elevation): installs to
+    `%LOCALAPPDATA%\Programs\GameLife` without administrator rights, with a Start menu and a
+    desktop shortcut and an uninstaller. Unsigned (no certificate); README explains SmartScreen.
+13. **App icon** made from the first frame of `content/hero/hero_01.png`, scaled with hard pixel
+    edges onto a dark rounded square (`desktop/scripts/make-icon.mjs`, 16 to 256 px ICO).
+
 ## Version 4.1: maps as chapters, tier 4, stronger stats (pacing fix)
 
 1. **Maps 2 and 3 are data** (`content/maps/map_02.json`, 22 spots, opens after wave 30;

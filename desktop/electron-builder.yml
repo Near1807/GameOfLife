@@ -1,0 +1,38 @@
+# Windows installer (desktop brief 7). Build with: npm run dist (on Windows), see README.md.
+appId: app.gamelife.desktop
+productName: GameLife
+copyright: GameLife
+directories:
+  output: dist
+  buildResources: build
+files:
+  - src/**
+  - build/icon.png
+  - package.json
+extraResources:
+  - { from: stage/server, to: server }
+  - { from: stage/frontend, to: frontend }
+  - { from: stage/content, to: content }
+  - { from: stage/defaults, to: defaults }
+  - { from: stage/jre, to: jre }
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+  artifactName: GameLife-Setup-${version}.exe
+  # unsigned: no certificate (see README, "Windows protected your PC")
+  signAndEditExecutable: true
+nsis:
+  # per-user install in %LOCALAPPDATA%\Programs\GameLife: no administrator rights needed
+  oneClick: true
+  perMachine: false
+  allowElevation: false
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: GameLife
+  runAfterFinish: true
+  # the data in %APPDATA%\GameLife is never removed by the uninstaller
+  deleteAppDataOnUninstall: false
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico

@@ -12,6 +12,10 @@
     "dev:frontend": "npm --prefix frontend run dev",
     "backup": "node scripts/backup.mjs",
     "simulate": "mvn -B -q -f backend/pom.xml compile exec:java",
-    "sprites": "node content/tools/make-sprites.mjs"
+    "sprites": "node content/tools/make-sprites.mjs",
+    "desktop": "npm --prefix desktop start",
+    "desktop:setup": "npm --prefix desktop install",
+    "desktop:test": "npm --prefix desktop test",
+    "desktop:dist": "npm run build && npm --prefix desktop run dist"
   }
 }

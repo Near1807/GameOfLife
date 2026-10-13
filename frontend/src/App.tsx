@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CalendarRange, Coins, LayoutDashboard, ListTodo, Repeat, Settings as SettingsIcon, Timer, User, WifiOff, Zap } from 'lucide-react';
-import { api, type AchievementStatus, type ActionResult, type Character, type GameState, type LedgerEvent, type Meta, type TimerView } from './api';
+import { api, type BackupStatus, type AchievementStatus, type ActionResult, type Character, type GameState, type LedgerEvent, type Meta, type TimerView } from './api';
 import { ReviewScreen } from './screens/ReviewScreen';
 import { HabitsScreen } from './screens/HabitsScreen';
 import { HeroScreen } from './screens/HeroScreen';
@@ -14,6 +14,7 @@ import { ShopScreen } from './screens/ShopScreen';
 import { statStyle } from './stats';
 import { achievementIcon } from './ui/Achievements';
 import { CountUp } from './ui/CountUp';
+import { ago } from './ui/BackupCard';
 import { TimerQuestion } from './ui/TimerQuestion';
 import { XpPops, type Pop } from './ui/XpPops';
 
@@ -65,6 +66,7 @@ export default function App() {
   const [version, setVersion] = useState(0); // bumped after each change so screens reload
   const [settings, setSettings] = useState<Settings>(loadSettings);
   const [offline, setOffline] = useState(false);
+  const [backup, setBackup] = useState<BackupStatus | null>(null);
   const toastTimer = useRef<number>(undefined);
 
   const showToast = useCallback((msg: string) => {
@@ -77,6 +79,7 @@ export default function App() {
     try {
       const [s, c] = await Promise.all([api.state(), api.character()]);
       watchAchievements();
+      api.backupStatus().then(setBackup).catch(() => {});
       setState(s);
       setCharacter(c);
       setOffline(false);
@@ -237,6 +240,11 @@ export default function App() {
           </div>
         )}
 
+        {screen === 'home' && backup?.stale && (
+          <button className="banner warn" onClick={() => setScreen('settings')} style={{ width: '100%', font: 'inherit', cursor: 'pointer', textAlign: 'left' }}>
+            <AlertTriangle size={16} /> {backup.lastBackup ? `Last backup ${ago(backup.lastBackup)}.` : 'No backup yet.'} Open Settings to back up now.
+          </button>
+        )}
         {!state || !meta ? (
           <p className="muted">Loading…</p>
         ) : (
