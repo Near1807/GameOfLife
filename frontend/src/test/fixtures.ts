@@ -1,4 +1,4 @@
-import type { ActionResult, GameState, Meta, StageView, TimerView } from '../api';
+import type { ActionResult, FightView, GameState, Look, Meta, TimerView } from '../api';
 
 export const meta: Meta = {
   stats: [
@@ -25,19 +25,25 @@ export const meta: Meta = {
   lastCheckinTags: ['SPIRIT'],
 };
 
-export const stage: StageView = {
-  stage: 1, stageCount: 10, target: 800, damage: 330, hp: 470, overkill: 0, cleared: false, ascendReady: false,
-  ascensions: 0, ascensionMultiplier: 1, weekStart: '2026-03-02', endsAt: '2099-03-09T03:00:00Z',
-  boss: { stage: 1, name: 'Bug Queen', title: 'Mother of all regressions', sprite: 'enemies/enemy_bug_queen_idle.png' },
-  rewardCoins: 100,
-  map: [],
+export const fight: FightView = {
+  fightId: '0-1', ascensions: 0, boss: 1, bossName: 'Bug Queen', bossTitle: 'Mother of all regressions',
+  bossSprite: 'content/enemies/boss_01.png', bossFrames: 4, variant: false, bossHp: 470, bossMaxHp: 800, bossAtk: 20,
+  heroHp: 90, heroMaxHp: 110, armorReduction: 0, todayXp: 40, dailyGoal: 100, shieldToday: 0.4, protectedToday: false,
+  expectedHit: 12, defeatsByThisBoss: 0, kills: 0, falls: 0, ascendReady: false, bossFiles: 10,
+  region: 'content/regions/region_01.png', heroSprite: 'content/hero/hero_01.png', heroFrames: 4, defeatMode: 'mild',
+  killReward: 100, pausedToday: false, pausesLeft: 7, recentAttacks: [], recentFalls: [], map: [],
+};
+
+export const look: Look = {
+  themeId: 'theme_nebula', themeTokens: {}, heroSprite: 'content/hero/hero_01.png', heroFrames: 4, arenaFilter: null, worn: [],
 };
 
 export const state: GameState = {
   today: '2026-03-02', serverNow: '2026-03-02T10:00:00Z', balance: 120, xpToday: 40,
   streak: { days: 3, freezes: 0, todayCounted: true, comebackPending: false, multiplierToday: 1.17, nextMilestone: 7 },
   multipliers: { streak: 1.1, weapon: 1, ascension: 1, comeback: 1 },
-  statXp: {}, weaponLevel: 0, nextUpgradeCost: 150, stage,
+  statXp: {}, weaponLevel: 0, nextUpgradeCost: 150, fight, look,
+  loadout: { weaponLevel: 0, armorLevel: 0, owned: [], equipped: {}, charms: [] },
   chain: { valid: true, brokenAtId: 0, message: 'ok' }, log: [],
 };
 

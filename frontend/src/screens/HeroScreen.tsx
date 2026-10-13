@@ -13,6 +13,10 @@ import { Radar } from '../ui/Radar';
  */
 export function HeroScreen(props: { character: Character; state: GameState }) {
   const c = props.character;
+  const worn = (kind: string) => {
+    const i = props.state.look.worn.find((w) => w.kind === kind);
+    return i ? ` · ${i.name}` : '';
+  };
   return (
     <div className="page">
       <h1 className="page-title">Hero</h1>
@@ -20,7 +24,7 @@ export function HeroScreen(props: { character: Character; state: GameState }) {
       <div className="grid two">
         <Card glow>
           <div className="row wrap" style={{ alignItems: 'flex-start', gap: 18 }}>
-            <HeroPortrait scale={5} />
+            <HeroPortrait scale={5} sprite={props.state.look.heroSprite} frames={props.state.look.heroFrames} />
             <div className="col grow" style={{ minWidth: 190 }}>
               <span className="level-badge" style={{ alignSelf: 'flex-start' }}>
                 <Crown size={14} /> Level {c.overallLevel}
@@ -33,9 +37,9 @@ export function HeroScreen(props: { character: Character; state: GameState }) {
               <div className="label" style={{ marginTop: 10 }}>
                 Gear
               </div>
-              <Slot icon={Sword} name="Weapon" value={`Lv ${props.state.weaponLevel} · x${props.state.multipliers.weapon.toFixed(2)} XP`} />
-              <Slot icon={Shield} name="Armor" value="Empty" />
-              <Slot icon={Gem} name="Charm" value="Empty" />
+              <Slot icon={Sword} name="Weapon" value={`Lv ${props.state.loadout.weaponLevel} · x${props.state.multipliers.weapon.toFixed(2)} damage${worn('weapon')}`} />
+              <Slot icon={Shield} name="Armour" value={`Lv ${props.state.loadout.armorLevel} · ${Math.round(props.state.fight.heroMaxHp)} HP, -${Math.round(props.state.fight.armorReduction * 100)}% damage${worn('armor')}`} />
+              <Slot icon={Gem} name="Charms" value={props.state.look.worn.filter((i) => i.kind === 'charm').map((i) => i.name).join(', ') || 'none'} />
             </div>
           </div>
         </Card>

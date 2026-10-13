@@ -1,19 +1,25 @@
 import { Check, Lock } from 'lucide-react';
-import type { StageView } from '../api';
+import type { FightView } from '../api';
+import { VARIANT_FILTER } from './Arena';
 
-/** The ten stages as nodes on a path (brief 11): cleared, current, locked. */
-export function CampaignMap(props: { stage: StageView }) {
+/**
+ * Every boss picture in content/enemies as a node (brief 11): beaten, current, or a locked
+ * silhouette. Past the last picture, bosses loop as tinted "stronger variants".
+ */
+export function CampaignMap(props: { fight: FightView }) {
+  const f = props.fight;
   return (
     <div className="map" role="list" aria-label="campaign map">
-      {props.stage.map.map((n) => (
-        <div key={n.stage} className={'map-node ' + n.status} role="listitem" aria-label={`stage ${n.stage}: ${n.name}, ${n.status.toLowerCase()}`}>
+      {f.map.map((n) => (
+        <div key={n.number} className={'map-node ' + n.status} role="listitem" aria-label={`boss ${n.number}: ${n.name}, ${n.status.toLowerCase()}`}>
           <div className="map-thumb">
-            <div className="sprite" style={{ width: 64, height: 64, backgroundImage: `url('/${n.sprite}')`, backgroundSize: '256px 64px' }} />
+            <div className="sprite" style={{ width: 64, height: 64, backgroundImage: `url('/${n.sprite}')`, backgroundSize: `${64 * n.frames}px 64px`,
+              filter: n.status !== 'LOCKED' && (f.ascensions > 0 || n.number > f.bossFiles) ? VARIANT_FILTER : undefined }} />
             {n.status === 'CLEARED' && <span className="map-badge"><Check size={14} /></span>}
             {n.status === 'LOCKED' && <span className="map-badge lock"><Lock size={12} /></span>}
           </div>
-          <div className="tiny" style={{ fontWeight: 600 }}>{n.stage}. {n.name}</div>
-          <div className="tiny faint tabular">{Math.round(n.target).toLocaleString('en-US')} HP</div>
+          <div className="tiny" style={{ fontWeight: 600 }}>{n.number}. {n.name}</div>
+          {n.defeats > 0 && <div className="tiny" style={{ color: 'var(--violet-soft)' }}>beat you {n.defeats}×</div>}
         </div>
       ))}
     </div>

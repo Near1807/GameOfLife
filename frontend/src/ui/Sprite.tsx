@@ -10,6 +10,7 @@ export function Sprite(props: {
   fps?: number;
   className?: string;
   label?: string;
+  filter?: string; // e.g. the "stronger variant" tint of a looped boss
 }) {
   const frames = props.frames ?? 4;
   const w = props.size * props.scale;
@@ -22,11 +23,12 @@ export function Sprite(props: {
         {
           width: w,
           height: w,
-          backgroundImage: `url('/${props.src}')`,
+          backgroundImage: props.src ? `url('/${props.src}')` : undefined,
           backgroundSize: `${w * frames}px ${w}px`,
           '--frame-w': `${w}px`,
           '--frames': frames,
           animationDuration: `${frames / (props.fps ?? 6)}s`,
+          filter: props.filter,
         } as React.CSSProperties
       }
     />
