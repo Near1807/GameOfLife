@@ -51,7 +51,10 @@ public class GameViewService {
                            int livesMax, String status, Instant nextAt, int attemptsToday, int maxAttemptsPerDay,
                            double balance, double incomeMultiplier, double discount, int nextSpotCost,
                            AttemptView last, List<AttemptView> recent, Map<String, EnemyView> enemies,
-                           Map<String, Integer> stats) {}
+                           Map<String, Integer> stats, List<StatEffect> statEffects) {}
+
+    /** What a stat does in the game (hero screen): its bonus now and the towers it unlocks. */
+    public record StatEffect(String stat, String boosts, String now, List<String> unlocks) {}
 
     public GameView view() {
         waves.sync(); // missed attempts first
@@ -88,7 +91,47 @@ public class GameViewService {
                 status.status(), status.nextAt(), status.attemptsToday(), config.game().maxAttemptsPerDay(),
                 c.balance(), round2(c.income()), round2(c.discount()),
                 GameMath.spotCost(c.state().spotsBought(), config.game()),
-                recent.isEmpty() ? null : recent.get(0), recent, enemies, c.stats());
+                recent.isEmpty() ? null : recent.get(0), recent, enemies, c.stats(), statEffects(c.stats()));
+    }
+
+    List<StatEffect> statEffects(Map<String, Integer> stats) {
+        GameConfig.Game g = config.game();
+        List<StatEffect> out = new ArrayList<>();
+        for (GameConfig.Stat st : config.stats()) {
+            int b = GameMath.bonus(stats, st.id());
+            String[] e = switch (st.id()) {
+                case "STRENGTH" -> new String[]{pct(g.strengthDamagePerLevel()) + " physical tower damage per level",
+                        "+" + pct0(g.strengthDamagePerLevel() * b)};
+                case "INTELLECT" -> new String[]{pct(g.intellectDamagePerLevel()) + " magic tower damage per level",
+                        "+" + pct0(g.intellectDamagePerLevel() * b)};
+                case "DISCIPLINE" -> new String[]{pct(g.disciplineRatePerLevel()) + " fire rate per level",
+                        "+" + pct0(g.disciplineRatePerLevel() * b)};
+                case "SPIRIT" -> new String[]{pct(g.spiritSlowPerLevel()) + " slow strength per level (max "
+                        + pct0(g.maxSlow()) + ")", "+" + pct0(g.spiritSlowPerLevel() * b)};
+                case "SOCIAL" -> new String[]{pct(g.socialIncomePerLevel()) + " coins from real actions per level",
+                        "+" + pct0(g.socialIncomePerLevel() * b)};
+                case "VITALITY" -> new String[]{"+1 life every " + g.livesPerVitalityLevels() + " levels",
+                        "+" + b / Math.max(1, g.livesPerVitalityLevels()) + " lives"};
+                case "CREATIVITY" -> new String[]{"-" + pct(g.creativityDiscountPerLevel()).substring(1)
+                        + " tower prices per level (max " + pct0(g.maxCreativityDiscount()) + ")",
+                        "-" + pct0(Math.min(g.maxCreativityDiscount(), g.creativityDiscountPerLevel() * b))};
+                default -> new String[]{"", ""};
+            };
+            List<String> unlocks = content.catalog().towers().values().stream()
+                    .filter(d -> d.requires() != null && d.requires().stat().equals(st.id()))
+                    .map(d -> d.name() + " at level " + d.requires().level()).toList();
+            out.add(new StatEffect(st.id(), e[0], b == 0 ? "none yet" : e[1], unlocks));
+        }
+        return out;
+    }
+
+    private static String pct(double v) {
+        String s = String.format(java.util.Locale.ROOT, "%.1f", v * 100);
+        return "+" + (s.endsWith(".0") ? s.substring(0, s.length() - 2) : s) + "%";
+    }
+
+    private static String pct0(double v) {
+        return pct(v).substring(1);
     }
 
     private TowerView tower(int spot, Build.Tower t, Build build, GameService.Context c) {

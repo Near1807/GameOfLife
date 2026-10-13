@@ -157,7 +157,7 @@
     "dropRate": 0.05
   },
   "game": {
-    "_comment": "The tower-defense game (v4 brief 2-3). Waves run automatically every waveIntervalMinutes, at most maxAttemptsPerDay per game day. Enemy HP of wave n = enemyBaseHp x enemyHpGrowth^(n-1). Spot n beyond the free ones costs spotBaseCost x spotCostGrowth^n (n = spots already bought). Stat bonuses use the stat level as in the prototype.",
+    "_comment": "The tower-defense game (v4 brief 2-3). Waves run automatically every waveIntervalMinutes, at most maxAttemptsPerDay per game day. Enemy HP of wave n = enemyBaseHp x enemyHpGrowth^(n-1). Spot n beyond the free ones costs spotBaseCost x spotCostGrowth^n (n = spots already bought). Stat bonuses (...PerLevel, lives per Vitality) count the levels gained above level 1, so a new character has none; tower requirements use the level itself.",
     "waveIntervalMinutes": 120,
     "maxAttemptsPerDay": 16,
     "enemyBaseHp": 24,

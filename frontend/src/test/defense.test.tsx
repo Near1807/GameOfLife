@@ -46,7 +46,7 @@ const view: DefenseView = {
   attemptsToday: 2, maxAttemptsPerDay: 16, balance: 500, incomeMultiplier: 1.03, discount: 0.005, nextSpotCost: 150,
   last: { key: 'wave-attempt:2:1', wave: 2, attempt: 1, won: true, manual: false, at: '2026-03-02T12:00:00Z', lives: 10,
     livesMax: 10, enemies: 7, killed: 7, leaked: 0, seconds: 8.4 },
-  recent: [], enemies: { grunt: { name: 'Grunt', color: '#f00', radius: 7, air: false, armor: 0, ward: 0 } }, stats: {},
+  recent: [], enemies: { grunt: { name: 'Grunt', color: '#f00', radius: 7, air: false, armor: 0, ward: 0 } }, stats: {}, statEffects: [],
 };
 
 const ok: ActionResult = { event: null, paid: true, message: '' };

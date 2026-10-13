@@ -347,6 +347,7 @@ export interface DefenseView {
   status: 'idle' | 'waiting' | 'stuck' | 'capped'; nextAt: string | null; attemptsToday: number; maxAttemptsPerDay: number;
   balance: number; incomeMultiplier: number; discount: number; nextSpotCost: number;
   last: AttemptView | null; recent: AttemptView[]; enemies: Record<string, EnemyView>; stats: Record<string, number>;
+  statEffects: { stat: string; boosts: string; now: string; unlocks: string[] }[];
 }
 
 /** One replay sample. enemies: [id, x, y, hp %, flags 1 slowed 2 burning 4 poisoned]. */

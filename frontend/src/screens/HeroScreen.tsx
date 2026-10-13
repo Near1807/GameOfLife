@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Crown, Gem, Radar as RadarIcon, Shield, Sword, Trophy } from 'lucide-react';
-import { api, type AchievementStatus } from '../api';
+import { Castle, Crown, Lock, Radar as RadarIcon, Trophy } from 'lucide-react';
+import { api, type AchievementStatus, type DefenseView } from '../api';
 import { AchievementGrid } from '../ui/Achievements';
 import type { Character, GameState } from '../api';
 import { statStyle } from '../stats';
@@ -11,26 +11,25 @@ import { Radar } from '../ui/Radar';
 
 /**
  * Character sheet (brief 8, v2 section 4.2): seven stats with level and XP bar, radar chart,
- * overall level, class from the two highest stats, rank, and the hero with its gear slots.
+ * overall level, class from the two highest stats, rank, and what each stat does in the tower game.
  * Every number comes from the backend, computed from the ledger.
  */
 export function HeroScreen(props: { character: Character; state: GameState; version: number }) {
   const [tab, setTab] = useState<'stats' | 'achievements'>('stats');
   const [list, setList] = useState<AchievementStatus[]>([]);
+  const [game, setGame] = useState<DefenseView | null>(null);
   useEffect(() => {
     api.achievements().then(setList).catch(() => {});
+    api.game().then(setGame).catch(() => {});
   }, [props.version]);
   const c = props.character;
-  const worn = (kind: string) => {
-    const i = props.state.look.worn.find((w) => w.kind === kind);
-    return i ? ` · ${i.name}` : '';
-  };
+  const effect = (id: string) => game?.statEffects.find((e) => e.stat === id);
   return (
     <div className="page">
       <h1 className="page-title">Hero</h1>
       <p className="page-sub">Who you are becoming. Stats only grow from real, confirmed actions.</p>
       <div className="segmented" role="tablist">
-        <button role="tab" aria-selected={tab === 'stats'} className={tab === 'stats' ? 'on' : ''} onClick={() => setTab('stats')}>Stats & gear</button>
+        <button role="tab" aria-selected={tab === 'stats'} className={tab === 'stats' ? 'on' : ''} onClick={() => setTab('stats')}>Stats</button>
         <button role="tab" aria-selected={tab === 'achievements'} className={tab === 'achievements' ? 'on' : ''} onClick={() => setTab('achievements')}>
           Achievements · {list.filter((a) => a.unlocked).length}
         </button>
@@ -49,12 +48,15 @@ export function HeroScreen(props: { character: Character; state: GameState; vers
                 {c.rank}
                 {c.balanced && ' · Balanced'}
               </div>
-              <div className="label" style={{ marginTop: 10 }}>
-                Gear
-              </div>
-              <Slot icon={Sword} name="Weapon" value={`Lv ${props.state.loadout.weaponLevel} · x${props.state.multipliers.weapon.toFixed(2)} damage${worn('weapon')}`} />
-              <Slot icon={Shield} name="Armour" value={`Lv ${props.state.loadout.armorLevel} · ${Math.round(props.state.fight.heroMaxHp)} HP, -${Math.round(props.state.fight.armorReduction * 100)}% damage${worn('armor')}`} />
-              <Slot icon={Gem} name="Charms" value={props.state.look.worn.filter((i) => i.kind === 'charm').map((i) => i.name).join(', ') || 'none'} />
+              {game && (
+                <>
+                  <div className="label" style={{ marginTop: 10 }}>In the game</div>
+                  <div className="row small" style={{ padding: '4px 0', gap: 8 }}>
+                    <Castle size={15} className="faint" /> Wave {game.wave} · {game.livesMax} lives · income x{game.incomeMultiplier.toFixed(2)}
+                    {game.discount > 0 && ` · -${Math.round(game.discount * 100)}% prices`}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </Card>
@@ -85,6 +87,20 @@ export function HeroScreen(props: { character: Character; state: GameState; vers
                     <div className="tiny faint tabular">
                       {Math.floor(s.xpIntoLevel)} / {Math.round(s.xpForNext)} XP to level {s.level + 1}
                     </div>
+                    {effect(s.id) && (
+                      <div className="tiny" style={{ marginTop: 4 }}>
+                        <span className="muted">{effect(s.id)!.boosts}</span>{' '}
+                        <span style={{ color: st.color, fontWeight: 600 }}>{effect(s.id)!.now === 'none yet' ? 'none yet' : `now ${effect(s.id)!.now}`}</span>
+                        {effect(s.id)!.unlocks.map((u) => {
+                          const done = Number(u.split(' ').pop()) <= s.level;
+                          return (
+                            <span key={u} className={'pill' + (done ? ' cyan' : '')} style={{ marginLeft: 6, padding: '1px 8px', fontSize: 11 }}>
+                              {!done && <Lock size={10} />} {u}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -92,18 +108,6 @@ export function HeroScreen(props: { character: Character; state: GameState; vers
           </div>
         </Card>
       </div>}
-    </div>
-  );
-}
-
-function Slot(props: { icon: typeof Sword; name: string; value: string }) {
-  return (
-    <div className="row small" style={{ padding: '4px 0' }}>
-      <props.icon size={15} className="faint" />
-      <span className="muted" style={{ width: 56 }}>
-        {props.name}
-      </span>
-      <span>{props.value}</span>
     </div>
   );
 }

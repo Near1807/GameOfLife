@@ -40,19 +40,19 @@ class GameEconomyTest extends IntegrationTest {
     @Test
     void saleRefundsThePricePaidEvenAfterTheDiscountChanged() {
         earn(1500);
-        game.build(0, "archer");                 // full price (Creativity 1 gives 0.5%: still 100)
+        game.build(0, "archer");                 // full price: 100
         game.upgrade(0, 1, 1);                    // Rapid 1, 80
         double paidForArcher = 100 + 80;
         game.build(1, "income");                  // Market
         game.upgrade(1, 1, 1);                    // Bargain 1: everything 5% cheaper from now on
-        game.upgrade(0, 1, 2);                    // Rapid 2 at the new price: ceil(200 x 0.945) = 189
-        paidForArcher += 189;
+        game.upgrade(0, 1, 2);                    // Rapid 2 at the new price: 200 x 0.95 = 190
+        paidForArcher += 190;
         double before = coins();
         var sale = game.sell(0, true);
         assertThat(sale.event().currencyDelta()).isEqualByComparingTo(BigDecimal.valueOf(paidForArcher));
         assertThat(coins()).isEqualTo(before + paidForArcher);
         // the price list today is different: the refund did not use it
-        assertThat(GameMath.price(100, 0.055) + GameMath.price(80, 0.055) + GameMath.price(200, 0.055))
+        assertThat(GameMath.price(100, 0.05) + GameMath.price(80, 0.05) + GameMath.price(200, 0.05))
                 .isNotEqualTo((int) paidForArcher);
     }
 
@@ -139,5 +139,36 @@ class GameEconomyTest extends IntegrationTest {
                         && !e.key().startsWith("tower:map_01:3:"))
                 .mapToDouble(e -> -e.currencyDelta().doubleValue()).sum();
         assertThat(paidOut).isEqualTo(spentOnSold);
+    }
+
+    @Test
+    void aMarketRaisesTheCoinsOfRealActionsButNeverTheXp() {
+        earn(500);
+        game.build(0, "income");                  // Market: earnings +6%
+        double before = coins();
+        tasks.tick(tasks.create("Study", 100, List.of("INTELLECT")).id());
+        LedgerEvent paid = ledger.all().get(ledger.all().size() - 1);
+        assertThat(paid.xp()).isEqualByComparingTo("110.00");             // 100 x streak 1.10, unchanged
+        assertThat(paid.currencyDelta()).isEqualByComparingTo("116.60");  // x 1.06
+        assertThat(paid.statSplits()).isEqualTo("{\"INTELLECT\":\"100.00\"}");
+        assertThat(coins() - before).isCloseTo(116.6, org.assertj.core.data.Offset.offset(1e-6));
+        // selling the Market gives back its price and the bonus stops
+        game.sell(0, true);
+        tasks.tick(tasks.create("Study more", 100, List.of()).id());
+        LedgerEvent after = ledger.all().get(ledger.all().size() - 1);
+        assertThat(after.currencyDelta()).isEqualByComparingTo(after.xp());
+    }
+
+    @Test
+    void socialAndCreativityLevelsFeedIncomeAndDiscount() {
+        var g = gamelife.config.GameConfig.load(java.nio.file.Path.of("../config/gamelife.json")).game();
+        var cat = GameCatalog.load(java.nio.file.Path.of("../content"));
+        Build market = Build.empty(3).withTower(0, new Build.Tower("income", 3, 0, 0));       // Commerce 3: +25%
+        var stats = new java.util.HashMap<String, Integer>(java.util.Map.of("SOCIAL", 11, "CREATIVITY", 41));
+        assertThat(GameMath.incomeMultiplier(market, cat, stats, g)).isCloseTo(1.25 * 1.30, org.assertj.core.data.Offset.offset(1e-9));
+        assertThat(GameMath.discount(market, cat, stats, g)).isCloseTo(0.15, org.assertj.core.data.Offset.offset(1e-9)); // CRE capped
+        Build bargains = Build.empty(3).withTower(0, new Build.Tower("income", 0, 3, 0))
+                .withTower(1, new Build.Tower("income", 0, 3, 0)).withTower(2, new Build.Tower("income", 0, 3, 0));
+        assertThat(GameMath.discount(bargains, cat, stats, g)).isCloseTo(0.5, org.assertj.core.data.Offset.offset(1e-9)); // 0.4 + 0.15 -> 0.5
     }
 }

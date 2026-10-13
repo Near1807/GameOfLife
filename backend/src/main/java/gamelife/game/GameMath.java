@@ -6,8 +6,8 @@ import java.util.Map;
 
 /**
  * The game's formulas (v4 brief 2), all numbers from config "game" and content/towers.json.
- * Pure functions. stats maps a stat id (STRENGTH, ...) to its level; a stat's bonus uses its
- * level, as in the prototype.
+ * Pure functions. stats maps a stat id (STRENGTH, ...) to its level (1 or more). Requirements use
+ * the level; bonuses use the levels gained above 1 (bonus()), so a fresh character has none.
  */
 public final class GameMath {
     private GameMath() {}
@@ -16,9 +16,14 @@ public final class GameMath {
         return stats.getOrDefault(stat, 1);
     }
 
+    /** Levels gained above the starting level 1: what the stat bonuses multiply. */
+    public static int bonus(Map<String, Integer> stats, String stat) {
+        return Math.max(0, level(stats, stat) - 1);
+    }
+
     /** Lives at the start of a wave: base + floor(VIT / livesPerVitalityLevels). */
     public static int livesMax(Map<String, Integer> stats, GameConfig.Game g) {
-        return g.baseLives() + level(stats, "VITALITY") / Math.max(1, g.livesPerVitalityLevels());
+        return g.baseLives() + bonus(stats, "VITALITY") / Math.max(1, g.livesPerVitalityLevels());
     }
 
     /**
@@ -45,11 +50,11 @@ public final class GameMath {
                 }
             }
         }
-        s.dmg *= 1 + (s.phys ? g.strengthDamagePerLevel() * level(stats, "STRENGTH")
-                : g.intellectDamagePerLevel() * level(stats, "INTELLECT"));
-        s.rate *= 1 + g.disciplineRatePerLevel() * level(stats, "DISCIPLINE");
+        s.dmg *= 1 + (s.phys ? g.strengthDamagePerLevel() * bonus(stats, "STRENGTH")
+                : g.intellectDamagePerLevel() * bonus(stats, "INTELLECT"));
+        s.rate *= 1 + g.disciplineRatePerLevel() * bonus(stats, "DISCIPLINE");
         if (s.slow > 0) {
-            s.slow = Math.min(g.maxSlow(), s.slow + g.spiritSlowPerLevel() * level(stats, "SPIRIT"));
+            s.slow = Math.min(g.maxSlow(), s.slow + g.spiritSlowPerLevel() * bonus(stats, "SPIRIT"));
         }
         return s;
     }
@@ -62,7 +67,7 @@ public final class GameMath {
                 coin += TowerStats.of(cat.tower(t.type()), t).coin;
             }
         }
-        return (1 + coin) * (1 + g.socialIncomePerLevel() * level(stats, "SOCIAL"));
+        return (1 + coin) * (1 + g.socialIncomePerLevel() * bonus(stats, "SOCIAL"));
     }
 
     /** Build discount: min(cap, Bargain) + min(cap, CRE bonus), capped at maxDiscount. */
@@ -74,7 +79,7 @@ public final class GameMath {
             }
         }
         d = Math.min(g.maxMarketDiscount(), d);
-        d += Math.min(g.maxCreativityDiscount(), g.creativityDiscountPerLevel() * level(stats, "CREATIVITY"));
+        d += Math.min(g.maxCreativityDiscount(), g.creativityDiscountPerLevel() * bonus(stats, "CREATIVITY"));
         return Math.min(g.maxDiscount(), d);
     }
 

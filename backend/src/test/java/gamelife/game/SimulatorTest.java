@@ -21,8 +21,8 @@ class SimulatorTest {
     void sameInputsGiveIdenticalResultsAndReplays() throws Exception {
         for (Build b : new Build[]{THREE_ARCHERS, MIXED, ADVANCED}) {
             for (int wave : new int[]{1, 7, 10}) {
-                String first = JSON.writeValueAsString(run(b, stats(5), wave));
-                String second = JSON.writeValueAsString(run(b, stats(5), wave));
+                String first = JSON.writeValueAsString(run(b, stats(6), wave));
+                String second = JSON.writeValueAsString(run(b, stats(6), wave));
                 assertEquals(first, second);
             }
         }
@@ -43,7 +43,7 @@ class SimulatorTest {
     }
 
     private void golden(Build b, int wave, boolean won, int lives, int killed, int leaked, double seconds) {
-        Simulator.Result r = run(b, stats(5), wave);
+        Simulator.Result r = run(b, stats(6), wave);
         String what = "wave " + wave + " " + b.fingerprint();
         assertEquals(won, r.won(), what);
         assertEquals(lives, r.lives(), what);
@@ -73,10 +73,10 @@ class SimulatorTest {
         Simulator.Result r = run(Build.empty(3), stats(1), 1);
         assertTrue(r.won());
         assertEquals(4, r.lives());
-        assertEquals(10, r.livesMax());           // 10 + floor(1 / 3)
+        assertEquals(10, r.livesMax());           // level 1: no bonus
         assertFalse(run(Build.empty(3), stats(1), 3).won()); // 13 enemies
         assertEquals(0, run(Build.empty(3), stats(1), 3).lives());
-        assertEquals(12, run(Build.empty(3), stats(6), 1).livesMax());
+        assertEquals(12, run(Build.empty(3), stats(7), 1).livesMax());   // 10 + floor(6 / 3)
     }
 
     @Test
@@ -97,8 +97,8 @@ class SimulatorTest {
     @Test
     void chainLightningJumpsToNearbyEnemies() {
         Build tesla = build(1, "tesla", 0, 0);
-        Simulator.Result chained = Simulator.simulate(MAP, tesla, stats(5), 6, CAT, G, true);
-        Simulator.Result single = Simulator.simulate(MAP, tesla, stats(5), 6,
+        Simulator.Result chained = Simulator.simulate(MAP, tesla, stats(6), 6, CAT, G, true);
+        Simulator.Result single = Simulator.simulate(MAP, tesla, stats(6), 6,
                 withBase("tesla", "chain", 0), G, true);
         assertTrue(chained.damage().get(1) > single.damage().get(1) * 1.5);
         long jumps = chained.replay().frames().stream().mapToLong(f -> f.chains().size()).sum();
@@ -113,8 +113,8 @@ class SimulatorTest {
         // a Plague venom with a strong poison next to the path's first bend, where enemies bunch up
         Build venom = build(0, "venom", 2, 0);
         GameCatalog spreading = withBase("venom", "spread", 1);
-        Simulator.Result with = Simulator.simulate(MAP, venom, stats(5), 4, spreading, G, false);
-        Simulator.Result without = Simulator.simulate(MAP, venom, stats(5), 4, CAT, G, false);
+        Simulator.Result with = Simulator.simulate(MAP, venom, stats(6), 4, spreading, G, false);
+        Simulator.Result without = Simulator.simulate(MAP, venom, stats(6), 4, CAT, G, false);
         assertTrue(with.damage().get(0) > without.damage().get(0));
         assertTrue(with.killed() >= without.killed());
     }
@@ -136,15 +136,15 @@ class SimulatorTest {
     @Test
     void spiritRaisesSlowUpToTheCap() {
         Build b = build(1, "frost", 3, 0);
-        assertEquals(0.75 + 0.004 * 5, GameMath.effective(1, b, CAT, MAP, stats(5), G).slow, 1e-9);
+        assertEquals(0.75 + 0.004 * 5, GameMath.effective(1, b, CAT, MAP, stats(6), G).slow, 1e-9);
         assertEquals(G.maxSlow(), GameMath.effective(1, b, CAT, MAP, stats(100), G).slow, 1e-9);
     }
 
     @Test
     void burnDamagesOverTime() {
         Build fire = build(1, "mage", 1, 0);
-        Simulator.Result burning = Simulator.simulate(MAP, fire, stats(5), 3, CAT, G, true);
-        Simulator.Result noBurn = Simulator.simulate(MAP, build(1, "mage", 0, 0), stats(5), 3, CAT, G, true);
+        Simulator.Result burning = Simulator.simulate(MAP, fire, stats(6), 3, CAT, G, true);
+        Simulator.Result noBurn = Simulator.simulate(MAP, build(1, "mage", 0, 0), stats(6), 3, CAT, G, true);
         assertTrue(burning.damage().get(1) > noBurn.damage().get(1));
         assertTrue(burning.replay().frames().stream().anyMatch(f -> f.enemies().stream().anyMatch(e -> (e[4] & 2) != 0)));
     }
@@ -159,8 +159,8 @@ class SimulatorTest {
 
     @Test
     void configChangesAlterTheOutcome() {
-        Simulator.Result normal = Simulator.simulate(MAP, THREE_ARCHERS, stats(5), 5, CAT, G, false);
-        Simulator.Result tougher = Simulator.simulate(MAP, THREE_ARCHERS, stats(5), 5, CAT,
+        Simulator.Result normal = Simulator.simulate(MAP, THREE_ARCHERS, stats(6), 5, CAT, G, false);
+        Simulator.Result tougher = Simulator.simulate(MAP, THREE_ARCHERS, stats(6), 5, CAT,
                 game(Map.of("enemyHpGrowth", 1.5)), false);
         assertTrue(normal.won());
         assertFalse(tougher.won());
@@ -169,7 +169,7 @@ class SimulatorTest {
     @Test
     void replayEndsWithTheServerResult() {
         for (int wave : new int[]{1, 5, 10}) {
-            Simulator.Result r = run(MIXED, stats(5), wave);
+            Simulator.Result r = run(MIXED, stats(6), wave);
             var last = r.replay().frames().get(r.replay().frames().size() - 1);
             assertEquals(r.lives(), last.lives());
             assertEquals(r.seconds(), last.t(), 1e-9);

@@ -12,6 +12,7 @@ import gamelife.rules.StreakState;
 import gamelife.fight.FightRules;
 import gamelife.fight.FightService;
 import gamelife.gear.GearService;
+import gamelife.game.GameService;
 import gamelife.time.GameTime;
 import org.springframework.stereotype.Service;
 
@@ -23,7 +24,7 @@ import java.util.Map;
 /**
  * Turns an explicit act into a ledger payment (brief 6):
  *   final XP = base x streak x weapon x ascension x comeback
- * Final XP is both the currency earned and the XP against the weekly boss.
+ *   currency = final XP x income   (v4: income = Markets and Social, see GameMath.incomeMultiplier)
  * Stat XP = base XP split equally between the tags (brief 8: gear cannot inflate stats).
  *
  * This is the ONLY place that pays XP. There is no "add points" method anywhere (brief 3.2).
@@ -35,8 +36,11 @@ public class PayoutService {
     private final GameTime time;
     private final FightService fight;
     private final GearService gear;
+    private final GameService game;
 
-    public PayoutService(LedgerService ledger, GameConfig config, GameTime time, FightService fight, GearService gear) {
+    public PayoutService(LedgerService ledger, GameConfig config, GameTime time, FightService fight, GearService gear,
+                         GameService game) {
+        this.game = game;
         this.fight = fight;
         this.gear = gear;
         this.ledger = ledger;
@@ -65,6 +69,9 @@ public class PayoutService {
         Multipliers m = multipliersNow(ledger.all());
         BigDecimal base = Money.of(req.baseXp());
         BigDecimal finalXp = Money.of(base.multiply(BigDecimal.valueOf(m.product())));
+        // v4: Markets and Social multiply only the currency part, never the XP or the stat XP
+        double income = game.incomeMultiplier(ledger.all());
+        BigDecimal currency = Money.of(finalXp.multiply(BigDecimal.valueOf(income)));
 
         Map<String, Object> meta = new LinkedHashMap<>();
         if (req.meta() != null) {
@@ -76,10 +83,11 @@ public class PayoutService {
                 "streak", round4(m.streak()),
                 "weapon", round4(m.weapon()),
                 "ascension", round4(m.ascension()),
-                "comeback", round4(m.comeback())));
+                "comeback", round4(m.comeback()),
+                "income", round4(income)));
 
         NewEvent event = new NewEvent(req.key(), req.type(), req.module(), req.label(),
-                finalXp, finalXp, StatSplitter.split(base, req.tags()), meta);
+                finalXp, currency, StatSplitter.split(base, req.tags()), meta);
         LedgerService.AppendResult result = ledger.append(event);
         if (result.written() && finalXp.signum() > 0) {
             fight.sync();                       // the boss may have just died: the kill is written now
