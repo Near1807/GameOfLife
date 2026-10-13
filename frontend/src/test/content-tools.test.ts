@@ -7,11 +7,15 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { validateContent } from '../../../content/tools/validate-content.mjs';
 import { decodePng, encodePng } from '../../../content/tools/png.mjs';
 import { sizeProblem, snapToPalette } from '../../../content/tools/palette-snap.mjs';
 
-const REAL = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../../content');
+// fileURLToPath, not new URL(...).pathname: on Windows the pathname is "/D:/a/..." and resolving it
+// gave "D:\\D:\\a\\..." (the Windows CI failure)
+const here = path.dirname(fileURLToPath(import.meta.url));
+const REAL = path.resolve(here, '../../../content');
 const PALETTE: string[] = JSON.parse(fs.readFileSync(path.join(REAL, 'palette.json'), 'utf8')).colors;
 let dir = '';
 
