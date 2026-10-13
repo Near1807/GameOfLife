@@ -14,6 +14,7 @@ import java.time.LocalDate;
  * @param streakForPayment streak value used for a payment made now (today counts once paid)
  * @param countedDaysTotal all counted days ever (freezes are earned from this)
  * @param lastCountedDay   most recent counted day, or null
+ * @param frozenDays       missed days that a freeze covered (fully shielded in the boss fight)
  */
 public record StreakState(
         int streakDays,
@@ -23,5 +24,6 @@ public record StreakState(
         boolean comebackPending,
         int streakForPayment,
         int countedDaysTotal,
-        LocalDate lastCountedDay) {
+        LocalDate lastCountedDay,
+        java.util.Set<LocalDate> frozenDays) {
 }

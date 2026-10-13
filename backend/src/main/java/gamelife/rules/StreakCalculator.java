@@ -26,12 +26,20 @@ public final class StreakCalculator {
 
     public static StreakState compute(Set<LocalDate> counted, Set<LocalDate> restDays, LocalDate today,
                                       GameConfig.Streak cfg) {
+        return compute(counted, restDays, today, cfg, 0);
+    }
+
+    /** extraFreezes: more freezes can be stored (a charm, brief 9.3). */
+    public static StreakState compute(Set<LocalDate> counted, Set<LocalDate> restDays, LocalDate today,
+                                      GameConfig.Streak cfg, int extraFreezes) {
+        int maxFreezes = cfg.maxFreezes() + extraFreezes;
+        Set<LocalDate> frozen = new java.util.HashSet<>();
         if (restDays == null) {
             restDays = Collections.emptySet();
         }
         LocalDate first = counted.stream().min(LocalDate::compareTo).orElse(null);
         if (first == null) {
-            return new StreakState(0, 0, false, 0, false, 1, 0, null);
+            return new StreakState(0, 0, false, 0, false, 1, 0, null, frozen);
         }
 
         int streak = 0;
@@ -44,7 +52,7 @@ public final class StreakCalculator {
             if (counted.contains(d)) {
                 streak++;
                 total++;
-                freezes = earnFreeze(freezes, total, cfg);
+                freezes = earnFreeze(freezes, total, cfg, maxFreezes);
                 gap = 0;
                 lastCounted = d;
             } else {
@@ -53,6 +61,7 @@ public final class StreakCalculator {
                     // planned rest: keeps the streak, adds nothing
                 } else if (freezes > 0) {
                     freezes--; // automatic freeze: keeps the streak, adds nothing
+                    frozen.add(d);
                 } else {
                     streak = 0;
                 }
@@ -64,14 +73,14 @@ public final class StreakCalculator {
         if (todayCounted) {
             streak++;
             total++;
-            freezes = earnFreeze(freezes, total, cfg);
+            freezes = earnFreeze(freezes, total, cfg, maxFreezes);
             lastCounted = today;
         } else {
             comebackPending = lastCounted != null && gap >= cfg.comebackGapDays();
         }
         int streakForPayment = todayCounted ? streak : streak + 1;
         return new StreakState(streak, freezes, todayCounted, gap, comebackPending, streakForPayment, total,
-                lastCounted);
+                lastCounted, frozen);
     }
 
     /** Streak multiplier = 1 + factor x days ^ exponent, no cap (brief 7). */
@@ -82,9 +91,9 @@ public final class StreakCalculator {
         return 1.0 + cfg.factor() * Math.pow(streakDays, cfg.exponent());
     }
 
-    private static int earnFreeze(int freezes, int totalCounted, GameConfig.Streak cfg) {
+    private static int earnFreeze(int freezes, int totalCounted, GameConfig.Streak cfg, int maxFreezes) {
         if (totalCounted % cfg.freezeEveryCountedDays() == 0) {
-            return Math.min(cfg.maxFreezes(), freezes + 1);
+            return Math.min(maxFreezes, freezes + 1);
         }
         return freezes;
     }

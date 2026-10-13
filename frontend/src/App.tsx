@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Coins, LayoutDashboard, ListTodo, Repeat, Settings as SettingsIcon, Swords, Timer, User, WifiOff, Zap } from 'lucide-react';
-import { api, type ActionResult, type Character, type GameState, type LedgerEvent, type Meta, type StageView, type TimerView } from './api';
+import { api, type AchievementStatus, type ActionResult, type Character, type FightView, type GameState, type LedgerEvent, type Meta, type TimerView } from './api';
 import { CampaignScreen } from './screens/CampaignScreen';
 import { HabitsScreen } from './screens/HabitsScreen';
 import { HeroScreen } from './screens/HeroScreen';
@@ -10,7 +10,12 @@ import { TasksScreen } from './screens/TasksScreen';
 import { TimerScreen } from './screens/TimerScreen';
 import { chime, loadSettings, saveSettings, type Settings } from './settings';
 import type { Act, Screen } from './types';
-import { BossDefeated } from './ui/BossDefeated';
+import { Arena, type Hit, type Recap } from './ui/Arena';
+import { FightMoment, type Moment } from './ui/FightOverlays';
+import { ShopScreen } from './screens/ShopScreen';
+import { statStyle } from './stats';
+import { loadSeen, saveSeen } from './seen';
+import { achievementIcon } from './ui/Achievements';
 import { CountUp } from './ui/CountUp';
 import { TimerQuestion } from './ui/TimerQuestion';
 import { XpPops, type Pop } from './ui/XpPops';
@@ -23,6 +28,32 @@ const NAV: { id: Screen; label: string; Icon: typeof Timer }[] = [
   { id: 'campaign', label: 'Boss', Icon: Swords },
   { id: 'hero', label: 'Hero', Icon: User },
 ];
+
+/**
+ * Stat orbs (brief 11): one glowing orb per stat tag flies from the arena into the matching stat
+ * bar of the home screen. Plain Web Animations, removed after 0.9 s, never blocks a tap.
+ */
+function flyOrbs(statIds: string[]) {
+  const from = document.querySelector('.arena')?.getBoundingClientRect();
+  if (!from) return;
+  statIds.forEach((id, i) => {
+    const to = document.querySelector(`[data-stat="${id}"]`)?.getBoundingClientRect();
+    if (!to) return;
+    const orb = document.createElement('span');
+    orb.className = 'orb';
+    orb.style.color = statStyle(id).color;
+    orb.style.left = `${from.left + from.width * 0.72}px`;
+    orb.style.top = `${from.top + from.height * 0.45}px`;
+    document.body.appendChild(orb);
+    const dx = to.left + to.width / 2 - (from.left + from.width * 0.72);
+    const dy = to.top + to.height / 2 - (from.top + from.height * 0.45);
+    const anim = orb.animate(
+      [{ transform: 'translate(0, 0) scale(1.4)', opacity: 1 }, { transform: `translate(${dx * 0.4}px, ${dy * 0.3 - 60}px) scale(1)`, opacity: 1, offset: 0.4 },
+        { transform: `translate(${dx}px, ${dy}px) scale(0.4)`, opacity: 0.2 }],
+      { duration: 850, delay: 150 + i * 90, easing: 'cubic-bezier(0.5, 0, 0.5, 1)', fill: 'backwards' });
+    anim.onfinish = () => orb.remove();
+  });
+}
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
@@ -37,8 +68,27 @@ export default function App() {
   const [version, setVersion] = useState(0); // bumped after each change so screens reload
   const [settings, setSettings] = useState<Settings>(loadSettings);
   const [offline, setOffline] = useState(false);
-  const [victory, setVictory] = useState<StageView | null>(null);
-  const lastStage = useRef<StageView | null>(null);
+  const [hits, setHits] = useState<Hit[]>([]);
+  const [recap, setRecap] = useState<Recap | null>(null);
+  const [moment, setMoment] = useState<Moment | null>(null);
+  const lastFight = useRef<FightView | null>(null);
+
+  /** Plays full-screen moments one after the other (victory, then the next boss's intro). */
+  const queue = useRef<Moment[]>([]);
+  const playing = useRef(false);
+  const playNext = useCallback(() => {
+    const next = queue.current.shift();
+    setMoment(next ?? null);
+    if (next) window.setTimeout(playNext, 1500);
+    else playing.current = false;
+  }, []);
+  const enqueue = useCallback((m: Moment) => {
+    queue.current.push(m);
+    if (!playing.current) {
+      playing.current = true;
+      playNext();
+    }
+  }, [playNext]);
   const toastTimer = useRef<number>(undefined);
 
   const showToast = useCallback((msg: string) => {
@@ -50,13 +100,9 @@ export default function App() {
   const refresh = useCallback(async () => {
     try {
       const [s, c] = await Promise.all([api.state(), api.character()]);
-      // Boss just died in this session: celebrate (brief 11). Not on first load.
-      const before = lastStage.current;
-      if (before && !before.cleared && s.stage.cleared && before.weekStart === s.stage.weekStart) {
-        setVictory(s.stage);
-        window.setTimeout(() => setVictory(null), 1500);
-      }
-      lastStage.current = s.stage;
+      watchFight(lastFight.current, s.fight);
+      watchAchievements();
+      lastFight.current = s.fight;
       setState(s);
       setCharacter(c);
       setOffline(false);
@@ -96,6 +142,81 @@ export default function App() {
     return () => window.clearTimeout(id);
   }, [timer, settings.sound, loadTimer]);
 
+  /**
+   * Turns changes of the fight into moments (brief 11): a recap of the attacks since the app was
+   * last seen, a victory, a defeat, and the intro of a boss seen for the first time.
+   */
+  const watchFight = useCallback((before: FightView | null, f: FightView) => {
+    const seen = loadSeen();
+    const newAttacks = f.recentAttacks.filter((a) => a.id > seen.attackId);
+    const newFalls = f.recentFalls.filter((id) => id > seen.fallId);
+    if (seen.attackId < 0) {
+      // first visit on this device: remember where we are, no recap of old history
+      saveSeen({ ...seen, attackId: f.recentAttacks[0]?.id ?? 0, fallId: f.recentFalls[0] ?? 0, fights: [f.fightId] });
+      return;
+    }
+    if (newAttacks.length > 0) {
+      const damage = newAttacks.reduce((a, x) => a + x.damage, 0);
+      const heal = newAttacks.reduce((a, x) => a + x.heal, 0);
+      setRecap({
+        id: newAttacks[0].id,
+        days: newAttacks.length,
+        damage,
+        blocked: newAttacks.reduce((a, x) => a + x.blocked, 0),
+        heal,
+        fell: newFalls.length > 0,
+        heroHpBefore: newFalls.length > 0 ? f.heroMaxHp : Math.min(f.heroMaxHp, f.heroHp + damage - heal),
+      });
+    }
+    if (before && f.kills > before.kills) {
+      enqueue({ id: Date.now(), kind: 'victory', name: before.bossName, sprite: before.bossSprite, frames: before.bossFrames,
+        variant: before.variant, reward: f.killReward });
+    }
+    if (newFalls.length > 0) {
+      enqueue({ id: Date.now() + 1, kind: 'defeat', name: f.bossName, sprite: f.bossSprite, frames: f.bossFrames,
+        variant: f.variant, defeats: f.defeatsByThisBoss });
+    }
+    if (!seen.fights.includes(f.fightId)) {
+      enqueue({ id: Date.now() + 2, kind: 'intro', name: f.bossName, title: f.bossTitle, sprite: f.bossSprite,
+        frames: f.bossFrames, variant: f.variant });
+    }
+    saveSeen({
+      attackId: Math.max(seen.attackId, f.recentAttacks[0]?.id ?? 0),
+      fallId: Math.max(seen.fallId, f.recentFalls[0] ?? 0),
+      fights: Array.from(new Set([...seen.fights, f.fightId])).slice(-50),
+    });
+  }, [enqueue]);
+
+  /** A toast for each achievement unlocked since this device last looked (shown once). */
+  const watchAchievements = useCallback(() => {
+    api.achievements().then((list) => {
+      const unlocked = list.filter((a) => a.unlocked).map((a) => a.id);
+      let known: string[] | null = null;
+      try { known = JSON.parse(localStorage.getItem('gamelife.achievements') ?? 'null'); } catch { known = null; }
+      if (known) {
+        const fresh = list.filter((a) => a.unlocked && !known!.includes(a.id));
+        fresh.forEach((a, i) => window.setTimeout(() => setUnlock(a), 1600 * i + 400));
+      }
+      try { localStorage.setItem('gamelife.achievements', JSON.stringify(unlocked)); } catch { /* ignore */ }
+    }).catch(() => {});
+  }, []);
+  const [unlock, setUnlock] = useState<AchievementStatus | null>(null);
+  useEffect(() => {
+    if (!unlock) return;
+    const id = window.setTimeout(() => setUnlock(null), 2600);
+    return () => window.clearTimeout(id);
+  }, [unlock]);
+
+  // The equipped theme restyles the whole app through its design tokens (brief 10).
+  const appliedTokens = useRef<string[]>([]);
+  useEffect(() => {
+    const tokens = state?.look.themeTokens ?? {};
+    const root = document.documentElement;
+    appliedTokens.current.forEach((k) => root.style.removeProperty(k));
+    Object.entries(tokens).forEach(([k, v]) => root.style.setProperty(k, v));
+    appliedTokens.current = Object.keys(tokens);
+  }, [state?.look.themeTokens]);
+
   /** Feedback for a payment: floating XP with its stat split, hero lunge, chime. Under 1.5 s. */
   const celebrate = useCallback(
     (e: LedgerEvent) => {
@@ -104,6 +225,10 @@ export default function App() {
       setPops((p) => [...p, { id, xp: e.xp, splits }]);
       window.setTimeout(() => setPops((p) => p.filter((x) => x.id !== id)), 1350);
       setHitKey((k) => k + 1);
+      // the arena: hero attacks, damage floats over the boss; big payouts are critical (brief 11)
+      setHits((h) => [...h.slice(-3), { id, amount: e.xp, crit: e.xp >= 100 }]);
+      window.setTimeout(() => setHits((h) => h.filter((x) => x.id !== id)), 1500);
+      if (!settings.reducedEffects) flyOrbs(splits.map((x) => x.id));
       if (settings.sound) chime('gain');
     },
     [settings.sound],
@@ -138,6 +263,11 @@ export default function App() {
     saveSettings(s);
   };
 
+  const arena = state && (
+    <Arena fight={state.fight} look={state.look} hits={hits} recap={recap} onDismissRecap={() => setRecap(null)}
+      onOpen={() => setScreen('campaign')} />
+  );
+
   const m = state?.multipliers;
   const mult = m ? m.streak * m.weapon * m.ascension * m.comeback : 1;
 
@@ -161,9 +291,9 @@ export default function App() {
             GameLife
           </div>
           {state && (
-            <span className="pill gold" aria-label="coins">
+            <button className="pill gold" aria-label="coins, open the shop" style={{ cursor: 'pointer', font: 'inherit' }} onClick={() => setScreen('shop')}>
               <Coins size={14} /> <CountUp value={state.balance} className="num" />
-            </span>
+            </button>
           )}
           {character && (
             <button className="level-badge" style={{ border: 'none', cursor: 'pointer' }} onClick={() => setScreen('hero')}>
@@ -192,8 +322,9 @@ export default function App() {
           <div key={screen}>
             {screen === 'home' && (
               <HomeScreen state={state} meta={meta} character={character} act={act} hitKey={hitKey} version={version}
-                refresh={refresh} onError={showToast} go={setScreen} />
+                refresh={refresh} onError={showToast} go={setScreen} arena={arena} />
             )}
+            {screen === 'shop' && <ShopScreen act={act} version={version} />}
             {screen === 'tasks' && (
               <TasksScreen meta={meta} multiplier={mult} act={act} version={version} refresh={refresh} onError={showToast}
                 onFocus={(id) => {
@@ -207,8 +338,9 @@ export default function App() {
             )}
             {screen === 'habits' && <HabitsScreen meta={meta} state={state} act={act} version={version} refresh={refresh} onError={showToast} />}
             {screen === 'campaign' && <CampaignScreen state={state} meta={meta} act={act} version={version} />}
-            {screen === 'hero' && character && <HeroScreen character={character} state={state} />}
-            {screen === 'settings' && <SettingsScreen settings={settings} onSettings={changeSettings} refresh={refresh} onMessage={showToast} />}
+            {screen === 'hero' && character && <HeroScreen character={character} state={state} version={version} />}
+            {screen === 'settings' && <SettingsScreen settings={settings} onSettings={changeSettings} refresh={refresh}
+              onMessage={showToast} fight={state.fight} act={act} openShop={() => setScreen('shop')} />}
           </div>
         )}
 
@@ -222,9 +354,15 @@ export default function App() {
       {timer && timer.status === 'ASK' && (
         <TimerQuestion timer={timer} previewXp={timer.countedMinutes * (meta?.timer.xpPerMinute ?? 1) * mult} onAnswer={answerTimer} />
       )}
-      {!victory && <XpPops pops={pops} />}
-      {victory && <BossDefeated stage={victory} />}
+      {!moment && <XpPops pops={pops} />}
+      {moment && <FightMoment key={moment.id} m={moment} />}
       {toast && <div className="toast">{toast}</div>}
+      {unlock && (
+        <div className="unlock" role="status">
+          <span className="badge-icon on">{(() => { const I = achievementIcon(unlock.icon); return <I size={20} />; })()}</span>
+          <div><div className="label" style={{ color: 'var(--gold)' }}>Achievement unlocked</div><b>{unlock.name}</b></div>
+        </div>
+      )}
     </div>
   );
 }

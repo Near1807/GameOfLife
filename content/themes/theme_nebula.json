@@ -1,0 +1,11 @@
+{
+  "contractVersion": 1,
+  "kind": "theme",
+  "id": "theme_nebula",
+  "name": "Nebula",
+  "price": 0,
+  "description": "The free default: violet and cyan on deep space.",
+  "tokens": {
+    "--bg": "#06070c"
+  }
+}

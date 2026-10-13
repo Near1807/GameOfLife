@@ -4,7 +4,159 @@ Every assumption and default applied while building GameLife. Section numbers re
 brief; "v2" refers to the version 2 upgrade request, which wins where the two disagree. Numbers
 are in `config/gamelife.json`, rules are in the file named next to them.
 
+## Version 3 (final scope): what was applied
+
+The v3 brief replaces the earlier ones. Its "Required" rules came first, then its "Default" rules.
+Everything below is configurable in `config/gamelife.json` or the content folder unless noted.
+
+### Contradictions and tuning (please read)
+
+1. **Pacing defaults vs pacing goals (9.1, 9.4).** With the brief's numbers (boss HP x1.3 per boss,
+   weapon +10% for 150 x 1.35^n), all three profiles progress, but a strong week cannot clear a
+   boss in 1 to 2 days: it takes 6 days at day 60. As 9.4 asks, I tuned three numbers:
+   `fight.bossHpGrowth` 1.3 → **1.12**, `weapon.bonusPerLevel` 1.10 → **1.12**,
+   `weapon.costGrowth` 1.35 → **1.25**. Full results are in `docs/PACING.md`.
+2. **"Strong" in the simulation.** A player who is *always* strong reaches a balance where each boss
+   takes 2 or more days, because boss HP and income both grow exponentially. I read the goal "a
+   strong week with a good weapon clears a boss in 1-2 days" as an average player at day 60 who
+   doubles their effort for a week. That is what the simulation and its test measure.
+3. **Lazy profile.** "30% of days with 0 XP" leaves the other days unspecified. I used the average
+   100 base XP on them, with the zero days spread out (never three in a row).
+4. **"Equipped weapon, armour and charm appear on the hero" (11).** Item pictures are 32x32 icons.
+   They are shown as small framed badges at the hero's feet in the arena, not drawn as layers onto
+   the sprite, because owner-made icons cannot be aligned with the hero. Outfits do replace the
+   hero picture.
+5. **Weapon and armour items vs levels (9.2, 9.3, 10).** The weapon and armour *levels* are the
+   economy upgrades of 9.2 and 9.3. Weapon and armour *items* in the registry are extra gear with
+   a `bonus` (damage %, max HP, reduction), equipped one per slot.
+6. **Skin.** The brief never defines it. A skin is an arena backdrop filter (`tokens.filter`),
+   cosmetic only.
+7. **Pause and the streak.** The brief says a pause shields the fight. I also let paused days keep
+   the streak, like rest days: illness should not break it.
+8. **Stage 7 HP in the old table** no longer matters: the ladder now uses the tuned growth.
+
+### The fight (9.1)
+
+- **Derived state:** everything comes from the ledger (`fight/FightReplay.java`): boss HP, hero
+  HP (kept as "missing HP", so a higher max HP raises current HP too), kills, falls and defeat
+  counters. New events: `BOSS_ATTACK`, `HERO_FELL`, `PAUSE`, `EQUIP`.
+- **When it syncs:** before every read of the game state and before and after every payment. It
+  writes one `BOSS_ATTACK` per past game day not yet attacked, in date order, with the key
+  `boss-attack:{ascensions-boss}:{date}`. The attack's numbers (ATK, shield, reduction, damage,
+  heal) are stored in its meta, so changing the config or gear later never rewrites the past.
+- **First attack:** the boss attacks from the first day with any event (planned rest or pause days
+  alone do not start the game).
+- **Shield:** min(1, day XP / goal + charm bonus). The day's XP includes un-ticks. Frozen, rest
+  and paused days give shield 1. A shield of 1 heals `fullShieldHeal` (10) plus any charm heal.
+- **Overkill:** discarded; the next boss appears at full HP the same moment, and the hero starts it
+  at full HP.
+- **Un-tick:** gives back the damage only if the tick hit the boss still being fought. A kill is
+  never undone (the ledger is append-only).
+- **Defeat modes:** `mild` (default, nothing lost), `medium` (the next kill of that boss pays 0
+  coins), `hard` (a fall costs floor(20%) of the coins). Stat XP is never taken.
+- **Kill reward:** 100 coins (`fight.killRewardCoins`), no XP, so a kill cannot inflate stats or
+  damage.
+- **Pause:** one tap for today (or a coming day), at most 7 within any 30-day window, in Settings
+  and on the Boss screen.
+- **Ascension:** offered once kills in this cycle reach the number of boss pictures. It needs a
+  second tap. Bosses come back with HP and ATK x (1 + 0.1 x ascensions) (`fight.ascensionBossScale`).
+  The weapon level goes back to 0; armour, items, stats and achievements stay; XP gets x1.05 per
+  ascension.
+- **Without ascending,** the ladder continues past the last picture with tinted variants of the
+  pictures (boss numbers keep growing), and Settings asks for more boss art.
+- **Hero max HP** = 100 + 10 x Vitality level + 20 x armour level + item HP. Armour reduction =
+  min(0.6, 0.05 x armour level + item reduction).
+- **The weekly review** is a calendar-week report: XP per day and per stat, damage dealt (validated
+  XP), damage taken and blocked (attacks for days of that week), falls, bosses beaten, skipped
+  habits, streak, corrections.
+- **Testing aid:** `gamelife.clock-offset-hours` shifts the server clock (default 0), to see the
+  morning after without waiting. It is meant for a throwaway database only.
+
+### Folder-driven content (12b)
+
+- `ContentService` scans `content/enemies`, `hero`, `regions`, `items` and `themes` at startup and
+  on **Reload content**. The backend serves `/content/**` straight from disk with no caching, so
+  no rebuild is needed.
+- **Sizes:** strips of 4 frames are accepted for bosses, hero looks and outfits; a single frame
+  works too. Sorting is by number, and `boss_3` and `boss_03` count as a duplicate (the first name
+  wins, the other is a warning).
+- **Warnings** (Settings → Content folder): wrong size, wrong name or format, unreadable PNG,
+  duplicate number or id, shop picture without JSON, JSON without picture, invalid JSON, unknown
+  kind, themes without tokens. A bad file is skipped and never crashes the app.
+- **Placeholder art** is drawn by `content/tools/make-sprites.mjs`: 3 hero looks (Initiate,
+  Netrunner, Archmage), 10 bosses, 4 regions (Neon City, Data Forest, Frozen Server Farm, Ember
+  Wastes), 13 items and 4 themes. They are original, not a licensed pack.
+
+### Shop, gear, themes, loot (9.2, 9.3, 10)
+
+- **Prices:** charms 300 to 500; weapon and armour items 300 to 500; outfits 800 and 2,000; skins
+  300 and 800; themes 300, 800 and 2,000. The default theme "Nebula" is free. The default hero look
+  is the free starter outfit.
+- **Spending** always takes two taps in the UI, and the API refuses a purchase without
+  `confirm: true` or with too few coins. Keys: `purchase:{itemId}` (once per item) and
+  `upgrade:{slot}:{cycle}:{level}`, so a double tap pays once.
+- **A new purchase is worn at once;** one tap takes it off. At most 2 charms (`shop.maxCharms`).
+  Equipping is a ledger event (`EQUIP`, no coins), so backups keep the loadout.
+- **Forecasts** use the average final XP of the last 14 days (`shop.forecastDays`), or the daily
+  goal when there is no history yet: "+12% damage: boss now takes about 14 days instead of 16" and
+  "you survive about 5 lazy days in a row instead of 4".
+- **Stat locks:** a locked item stays visible with its requirement ("needs Vitality level 3, you
+  have 1").
+- **Themes** are JSON design tokens applied to the whole app. One default token is kept for Nebula
+  so the schema stays uniform.
+- **Loot:** about 5% of validations (`loot.dropRate`) drop an outfit or skin you do not own. It is
+  decided by a hash of the event key, so it is deterministic and a retry gives the same result.
+  Cosmetic only: no coins, no XP.
+
+### Battle arena and feedback (11)
+
+- **Layout:** the arena is the first thing on Home. The region background is shown at x1 on phones
+  and x2 from 640 px wide, repeated sideways. A 64 px strip above the scene holds the health
+  panels, so they never cover a fighter. Hero and boss are drawn at x2 / x4 of their pixel size.
+- **A payout** sends a projectile, flashes the boss, floats the damage number up and drains the
+  bar. A payout of 100 XP or more is a "Critical": bigger number, gold flash.
+- **Stat orbs** fly from the arena into the stat bars on Home (skipped with reduced effects).
+- **Recap:** the attacks newer than the last one this device has seen (remembered in the browser).
+  The hero bar animates from the HP before the night. The very first visit on a device shows no
+  recap of old history.
+- **Moments:** victory, defeat and boss intro are full-screen for 1.5 s each, queued one after the
+  other. They never block a tap (pointer-events: none).
+- **Sound is off by default** (11). Reduced effects removes all motion.
+
+### Achievements (8)
+
+- 38 entries in `content/achievements.json`, read on every request (no restart). Each rule is
+  `{fact, min}` (`statLevel` also needs `stat`); 23 facts are computed from the ledger.
+- Nothing is stored: an un-tick can re-lock "First Quest", while kills are never undone. A toast
+  shows each new unlock once per device.
+
+### Content tools and PWA (12, 4)
+
+- **`validate-content.mjs`** runs before every frontend build (`prebuild`). It understands the
+  subset of JSON Schema that `content/schemas/*.schema.json` uses, and decodes PNGs itself
+  (8-bit grey, RGB, RGBA and palette PNGs).
+- **`palette-snap.mjs`** maps pixels to the nearest palette colour by weighted RGB distance. Pixels
+  below 50% alpha become transparent, the rest opaque. It does not resize: it reports wrong sizes,
+  because scaling would blur pixel art.
+- **Style guide:** `content/styleguide/` holds the rules, reference sprites, a palette image and a
+  prompt template.
+- **PWA:** manifest, icons made from the hero, and a network-first service worker. It never caches
+  `/api`; only the app shell is a fallback. There are no offline writes, and it is registered in
+  production builds only.
+- **New dev dependency:** `@types/node`, so the test of the content tools can be type-checked.
+
+### Not done or partly done
+
+- The old v2 weekly-stage code and its tests were removed. The weekly review remains, as a
+  calendar-week report.
+- A purchase cannot be refunded (no "sell" in the brief).
+- Item pictures are not drawn onto the hero sprite (see contradiction 4).
+- The hero has only an idle animation. The attack, hit and victory sheets of the contract are
+  played as CSS motion on the idle sprite, because placeholder sheets for them were not drawn.
+
 ## Version 2, step 3 (weekly boss, review, stats dashboard, new art)
+
+> The weekly stage below was **replaced in v3** by the losable fight. The rest still applies.
 
 Owner decisions applied: keep the level formula; keep the stricter "Balanced" rule; the daily goal
 is config (`home.dailyXpGoal`, 100); hero and boss art moved from step 5 into step 3.

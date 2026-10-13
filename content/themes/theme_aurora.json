@@ -1,0 +1,23 @@
+{
+  "contractVersion": 1,
+  "kind": "theme",
+  "id": "theme_aurora",
+  "name": "Aurora",
+  "price": 300,
+  "description": "Polar greens and teal light.",
+  "tokens": {
+    "--bg": "#041014",
+    "--bg-glow-1": "rgba(16, 185, 129, 0.18)",
+    "--bg-glow-2": "rgba(45, 212, 191, 0.14)",
+    "--violet": "#10b981",
+    "--violet-soft": "#6ee7b7",
+    "--cyan": "#2dd4bf",
+    "--accent-grad": "linear-gradient(135deg, #10b981 0%, #22d3ee 100%)",
+    "--surface": "rgba(14, 32, 34, 0.62)",
+    "--surface-2": "rgba(20, 44, 46, 0.72)",
+    "--surface-hover": "rgba(28, 60, 62, 0.8)",
+    "--border": "rgba(110, 231, 183, 0.10)",
+    "--border-strong": "rgba(110, 231, 183, 0.22)",
+    "--glow-violet": "0 0 24px rgba(16, 185, 129, 0.35)"
+  }
+}

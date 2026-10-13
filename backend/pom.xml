@@ -52,6 +52,15 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+            <!-- "npm run simulate": runs the pacing simulation (brief 9.4) -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <configuration>
+                    <mainClass>gamelife.sim.PacingSimulation</mainClass>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

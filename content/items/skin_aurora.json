@@ -1,0 +1,11 @@
+{
+  "contractVersion": 1,
+  "id": "skin_aurora",
+  "name": "Aurora Sky",
+  "kind": "skin",
+  "price": 300,
+  "tokens": {
+    "filter": "hue-rotate(110deg) saturate(1.2)"
+  },
+  "description": "Arena backdrop under northern lights. Looks only."
+}

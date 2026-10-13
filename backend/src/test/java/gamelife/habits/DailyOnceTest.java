@@ -55,7 +55,8 @@ class DailyOnceTest extends IntegrationTest {
         assertThat(habits.done(h.id()).paid()).isFalse(); // same game day
         setLocal(2026, 3, 3, 4, 0);
         assertThat(habits.done(h.id()).paid()).isTrue();  // new game day
-        assertThat(ledger.all()).extracting(e -> e.gameDay().toString())
+        assertThat(ledger.all()).filteredOn(e -> e.type() == gamelife.ledger.EventType.HABIT_DONE)
+                .extracting(e -> e.gameDay().toString())
                 .containsExactly("2026-03-02", "2026-03-03");
     }
 

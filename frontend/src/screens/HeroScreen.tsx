@@ -1,4 +1,7 @@
-import { Crown, Gem, Radar as RadarIcon, Shield, Sword } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Crown, Gem, Radar as RadarIcon, Shield, Sword, Trophy } from 'lucide-react';
+import { api, type AchievementStatus } from '../api';
+import { AchievementGrid } from '../ui/Achievements';
 import type { Character, GameState } from '../api';
 import { statStyle } from '../stats';
 import { Bar } from '../ui/Bar';
@@ -11,16 +14,32 @@ import { Radar } from '../ui/Radar';
  * overall level, class from the two highest stats, rank, and the hero with its gear slots.
  * Every number comes from the backend, computed from the ledger.
  */
-export function HeroScreen(props: { character: Character; state: GameState }) {
+export function HeroScreen(props: { character: Character; state: GameState; version: number }) {
+  const [tab, setTab] = useState<'stats' | 'achievements'>('stats');
+  const [list, setList] = useState<AchievementStatus[]>([]);
+  useEffect(() => {
+    api.achievements().then(setList).catch(() => {});
+  }, [props.version]);
   const c = props.character;
+  const worn = (kind: string) => {
+    const i = props.state.look.worn.find((w) => w.kind === kind);
+    return i ? ` · ${i.name}` : '';
+  };
   return (
     <div className="page">
       <h1 className="page-title">Hero</h1>
       <p className="page-sub">Who you are becoming. Stats only grow from real, confirmed actions.</p>
-      <div className="grid two">
+      <div className="segmented" role="tablist">
+        <button role="tab" aria-selected={tab === 'stats'} className={tab === 'stats' ? 'on' : ''} onClick={() => setTab('stats')}>Stats & gear</button>
+        <button role="tab" aria-selected={tab === 'achievements'} className={tab === 'achievements' ? 'on' : ''} onClick={() => setTab('achievements')}>
+          Achievements · {list.filter((a) => a.unlocked).length}
+        </button>
+      </div>
+      {tab === 'achievements' && <Card title="Achievements" icon={Trophy}><AchievementGrid list={list} /></Card>}
+      {tab === 'stats' && <div className="grid two">
         <Card glow>
           <div className="row wrap" style={{ alignItems: 'flex-start', gap: 18 }}>
-            <HeroPortrait scale={5} />
+            <HeroPortrait scale={5} sprite={props.state.look.heroSprite} frames={props.state.look.heroFrames} />
             <div className="col grow" style={{ minWidth: 190 }}>
               <span className="level-badge" style={{ alignSelf: 'flex-start' }}>
                 <Crown size={14} /> Level {c.overallLevel}
@@ -33,9 +52,9 @@ export function HeroScreen(props: { character: Character; state: GameState }) {
               <div className="label" style={{ marginTop: 10 }}>
                 Gear
               </div>
-              <Slot icon={Sword} name="Weapon" value={`Lv ${props.state.weaponLevel} · x${props.state.multipliers.weapon.toFixed(2)} XP`} />
-              <Slot icon={Shield} name="Armor" value="Empty" />
-              <Slot icon={Gem} name="Charm" value="Empty" />
+              <Slot icon={Sword} name="Weapon" value={`Lv ${props.state.loadout.weaponLevel} · x${props.state.multipliers.weapon.toFixed(2)} damage${worn('weapon')}`} />
+              <Slot icon={Shield} name="Armour" value={`Lv ${props.state.loadout.armorLevel} · ${Math.round(props.state.fight.heroMaxHp)} HP, -${Math.round(props.state.fight.armorReduction * 100)}% damage${worn('armor')}`} />
+              <Slot icon={Gem} name="Charms" value={props.state.look.worn.filter((i) => i.kind === 'charm').map((i) => i.name).join(', ') || 'none'} />
             </div>
           </div>
         </Card>
@@ -72,7 +91,7 @@ export function HeroScreen(props: { character: Character; state: GameState }) {
             })}
           </div>
         </Card>
-      </div>
+      </div>}
     </div>
   );
 }

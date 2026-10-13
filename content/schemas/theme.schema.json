@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Theme (content/themes/NAME.json)",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "kind",
+    "price",
+    "tokens"
+  ],
+  "properties": {
+    "contractVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "name": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "theme"
+      ]
+    },
+    "price": {
+      "type": "number",
+      "minimum": 0
+    },
+    "description": {
+      "type": "string"
+    },
+    "tokens": {
+      "type": "object"
+    }
+  }
+}

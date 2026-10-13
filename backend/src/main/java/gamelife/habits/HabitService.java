@@ -70,7 +70,7 @@ public class HabitService {
 
     public List<HabitView> list() {
         LocalDate today = time.today();
-        Set<LocalDate> rest = LedgerFacts.restDays(ledger.all());
+        Set<LocalDate> rest = LedgerFacts.restOrPausedDays(ledger.all());
         return habits.findNotArchived().stream().map(h -> {
             Set<LocalDate> done = doneDays(h.id());
             LocalDate created = time.gameDay(h.createdAt());

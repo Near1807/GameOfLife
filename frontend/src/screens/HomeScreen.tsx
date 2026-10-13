@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import {
-  Activity, CalendarCheck, Check, ChevronRight, Coins, Flame, Moon, Play, Smile, Snowflake, Sparkles, Sword, Timer, Undo2, Zap,
+  Activity, CalendarCheck, Check, ChevronRight, Coins, Flame, Gift, Moon, Play, Skull, Smile, Snowflake, Sparkles, Sword, Timer, Undo2, Zap,
 } from 'lucide-react';
 import { api, type Character, type GameState, type HabitView, type LedgerEvent, type Meta, type TaskView } from '../api';
 import { nextAction } from '../nextAction';
 import { statStyle } from '../stats';
 import type { Act, Screen } from '../types';
 import { Bar } from '../ui/Bar';
-import { BossCard } from '../ui/BossCard';
 import { Card } from '../ui/Card';
 import { CountUp } from '../ui/CountUp';
 import { HeroPortrait } from '../ui/HeroPortrait';
@@ -26,6 +25,7 @@ export function HomeScreen(props: {
   refresh: () => void;
   onError: (m: string) => void;
   go: (s: Screen) => void;
+  arena: React.ReactNode;
 }) {
   const { state, meta } = props;
   const s = state.streak;
@@ -51,12 +51,14 @@ export function HomeScreen(props: {
   const c = props.character;
 
   return (
-    <div className="page grid home">
+    <div className="page">
+    {props.arena}
+    <div className="grid home">
       {/* hero */}
       <Card glow>
         <div className="row" style={{ alignItems: 'flex-start', gap: 16 }}>
           <button onClick={() => props.go('hero')} style={{ all: 'unset', cursor: 'pointer' }} aria-label="open character sheet">
-            <HeroPortrait scale={3} hitKey={props.hitKey} />
+            <HeroPortrait scale={3} hitKey={props.hitKey} sprite={state.look.heroSprite} frames={state.look.heroFrames} />
           </button>
           <div className="col grow">
             <span className="level-badge" style={{ alignSelf: 'flex-start' }}>
@@ -74,7 +76,7 @@ export function HomeScreen(props: {
             {c.stats.map((st) => {
               const style = statStyle(st.id);
               return (
-                <div key={st.id} className="row" style={{ gap: 8 }}>
+                <div key={st.id} className="row" style={{ gap: 8 }} data-stat={st.id}>
                   <style.Icon size={15} style={{ color: style.color, flexShrink: 0 }} />
                   <span className="tiny muted" style={{ width: 30 }}>
                     {style.short}
@@ -93,9 +95,6 @@ export function HomeScreen(props: {
       </Card>
 
       <div className="grid">
-        {/* this week's boss (brief 9.1) */}
-        <BossCard stage={state.stage} onOpen={() => props.go('campaign')} />
-
         {/* today and wallet */}
         <Card>
           <div className="grid two" style={{ gap: 18 }}>
@@ -117,9 +116,9 @@ export function HomeScreen(props: {
                 <CountUp value={state.balance} className="big-num gold" />
               </div>
               <Bar value={state.balance / state.nextUpgradeCost} color="var(--violet-soft)" thick label="toward next weapon upgrade" />
-              <div className="tiny faint" style={{ marginTop: 6 }}>
-                <Sword size={11} /> Weapon Lv {state.weaponLevel + 1} at {Math.round(state.nextUpgradeCost)}
-              </div>
+              <button className="tiny faint" style={{ all: 'unset', cursor: 'pointer', marginTop: 6, display: 'block', fontSize: 11.5 }} onClick={() => props.go('shop')}>
+                <Sword size={11} /> Weapon Lv {state.weaponLevel + 1} at {Math.round(state.nextUpgradeCost)} · open shop
+              </button>
             </div>
           </div>
         </Card>
@@ -127,7 +126,8 @@ export function HomeScreen(props: {
         {/* streak */}
         <Card>
           <div className="row" style={{ gap: 14 }}>
-            <Flame size={40} className={s.days > 0 ? 'flame live' : 'flame off'} />
+            <Flame size={s.days >= 365 ? 64 : s.days >= 100 ? 56 : s.days >= 30 ? 48 : s.days >= 7 ? 44 : 38}
+              className={s.days > 0 ? 'flame live' : 'flame off'} />
             <div className="grow">
               <div className="row" style={{ alignItems: 'baseline', gap: 8 }}>
                 <span className="big-num">{s.days}</span>
@@ -219,10 +219,11 @@ export function HomeScreen(props: {
         ))}
       </Card>
     </div>
+    </div>
   );
 }
 
-const MODULE_ICON = { todo: Check, timer: Timer, habit: CalendarCheck, checkin: Smile, rest: Moon } as const;
+const MODULE_ICON = { todo: Check, timer: Timer, habit: CalendarCheck, checkin: Smile, rest: Moon, fight: Skull, shop: Coins, loot: Gift } as const;
 
 function FeedItem(props: { e: LedgerEvent }) {
   const e = props.e;
@@ -235,6 +236,7 @@ function FeedItem(props: { e: LedgerEvent }) {
       </span>
       <div className="grow">
         <div style={{ fontWeight: 550 }}>{e.type === 'REST_DAY' ? 'Rest day planned' : e.label}</div>
+        {e.type === 'BOSS_ATTACK' && <div className="tiny muted">hit for {Math.round(Number(e.meta.damage))}, blocked {Math.round(Number(e.meta.blocked))}</div>}
         <div className="meta-row tiny faint">
           {new Date(e.occurredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           {tags.map((t) => {
@@ -244,6 +246,7 @@ function FeedItem(props: { e: LedgerEvent }) {
         </div>
       </div>
       {e.xp !== 0 && <span className="reward">{e.xp > 0 ? '+' : ''}{Math.round(e.xp)}</span>}
+      {e.xp === 0 && e.currencyDelta !== 0 && <span className="reward">{e.currencyDelta > 0 ? '+' : ''}{Math.round(e.currencyDelta)} coins</span>}
     </div>
   );
 }

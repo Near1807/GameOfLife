@@ -3,6 +3,7 @@ package gamelife.review;
 import gamelife.common.Json;
 import gamelife.common.Money;
 import gamelife.config.GameConfig;
+import gamelife.fight.FightService;
 import gamelife.habits.Habit;
 import gamelife.habits.HabitRepository;
 import gamelife.ledger.EventType;
@@ -10,8 +11,6 @@ import gamelife.ledger.LedgerEvent;
 import gamelife.ledger.LedgerService;
 import gamelife.rules.LedgerFacts;
 import gamelife.rules.StreakCalculator;
-import gamelife.stage.BossContent;
-import gamelife.stage.StageRules;
 import gamelife.time.GameTime;
 import org.springframework.stereotype.Service;
 
@@ -34,15 +33,15 @@ public class ReviewService {
     private final HabitRepository habits;
     private final GameConfig config;
     private final GameTime time;
-    private final BossContent bosses;
+    private final FightService fight;
 
     public ReviewService(LedgerService ledger, HabitRepository habits, GameConfig config, GameTime time,
-                         BossContent bosses) {
+                         FightService fight) {
+        this.fight = fight;
         this.ledger = ledger;
         this.habits = habits;
         this.config = config;
         this.time = time;
-        this.bosses = bosses;
     }
 
     public record DayXp(LocalDate date, double xp, boolean counted, boolean rest, boolean future) {}
@@ -51,14 +50,19 @@ public class ReviewService {
 
     public record Correction(LocalDate day, String label, double xp, String reason) {}
 
+    /**
+     * A calendar-week report (brief 9.1: it does not control the boss). damageDealt = XP validated
+     * that week; damageTaken = the boss attacks for days of that week.
+     */
     public record WeekReview(LocalDate weekStart, LocalDate previousWeek, LocalDate nextWeek, boolean currentWeek,
-                             int stage, String bossName, String bossSprite, double target, double damage,
-                             boolean cleared, List<DayXp> days, Map<String, Double> statXp, int tasksDone,
+                             double damageDealt, double damageTaken, double damageBlocked, int falls,
+                             int bossesDefeated, List<String> bossNames, List<DayXp> days, Map<String, Double> statXp, int tasksDone,
                              int focusMinutes, int habitsDone, Double averageMood, int streakAtEnd,
                              List<SkippedHabit> skippedHabits, List<Correction> corrections) {}
 
     /** Review of the game week containing `day` (default: this week). */
     public WeekReview week(LocalDate day) {
+        fight.sync(); // the boss attacks of past days must be written before they are reported
         LocalDate today = time.today();
         LocalDate start = GameTime.weekStart(day == null ? today : day);
         LocalDate end = start.plusDays(7); // exclusive
@@ -66,9 +70,8 @@ public class ReviewService {
         List<LedgerEvent> inWeek = all.stream()
                 .filter(e -> !e.gameDay().isBefore(start) && e.gameDay().isBefore(end)).toList();
 
-        StageRules.Progress p = StageRules.compute(all, start, config.stages());
         Set<LocalDate> counted = LedgerFacts.countedDays(all);
-        Set<LocalDate> rest = LedgerFacts.restDays(all);
+        Set<LocalDate> rest = LedgerFacts.restOrPausedDays(all);
 
         List<DayXp> days = new ArrayList<>();
         for (LocalDate d = start; d.isBefore(end); d = d.plusDays(1)) {
@@ -85,7 +88,23 @@ public class ReviewService {
         int habitsDone = 0;
         List<Integer> moods = new ArrayList<>();
         List<Correction> corrections = new ArrayList<>();
+        double dealt = 0, taken = 0, blocked = 0;
+        int falls = 0;
+        List<String> killed = new ArrayList<>();
+        for (LedgerEvent e : all) { // attacks belong to the day they punish, written the morning after
+            if (e.type() == EventType.BOSS_ATTACK) {
+                Map<String, Object> m = Json.toMap(e.meta());
+                LocalDate d = LocalDate.parse(String.valueOf(m.get("date")));
+                if (!d.isBefore(start) && d.isBefore(end)) {
+                    taken += ((Number) m.get("damage")).doubleValue();
+                    blocked += ((Number) m.get("blocked")).doubleValue();
+                }
+            }
+        }
         for (LedgerEvent e : inWeek) {
+            if (e.xp().signum() > 0) dealt += e.xp().doubleValue();
+            if (e.type() == EventType.HERO_FELL) falls++;
+            if (e.type() == EventType.STAGE_CLEARED) killed.add(e.label().replaceFirst("^Defeated ", ""));
             Map<String, Object> meta = Json.toMap(e.meta());
             switch (e.type()) {
                 case TASK_DONE -> tasksDone++;
@@ -104,11 +123,11 @@ public class ReviewService {
         LocalDate lastDay = end.minusDays(1).isAfter(today) ? today : end.minusDays(1);
         int streakAtEnd = StreakCalculator.compute(counted, rest, lastDay, config.streak()).streakDays();
 
-        BossContent.Boss boss = bosses.forStage(p.stage());
         LocalDate first = all.isEmpty() ? today : all.get(0).gameDay();
         return new WeekReview(start, start.isAfter(GameTime.weekStart(first)) ? start.minusDays(7) : null,
                 end.isAfter(today) ? null : end, start.equals(GameTime.weekStart(today)),
-                p.stage(), boss.name(), boss.sprite(), p.target(), p.damage(), p.cleared(), days, statXp, tasksDone,
+                Math.round(dealt * 100) / 100.0, Math.round(taken * 100) / 100.0, Math.round(blocked * 100) / 100.0,
+                falls, killed.size(), killed, days, statXp, tasksDone,
                 focus, habitsDone, mood, streakAtEnd, skippedHabits(start, end, today, rest), corrections);
     }
 
@@ -144,12 +163,13 @@ public class ReviewService {
                             int currentStreak, int countedDaysAllTime, int bossesDefeated) {}
 
     public Dashboard dashboard(int days) {
+        fight.sync();
         int n = Math.max(7, Math.min(365, days));
         LocalDate today = time.today();
         LocalDate from = today.minusDays(n - 1);
         List<LedgerEvent> all = ledger.all();
         Set<LocalDate> counted = LedgerFacts.countedDays(all);
-        Set<LocalDate> rest = LedgerFacts.restDays(all);
+        Set<LocalDate> rest = LedgerFacts.restOrPausedDays(all);
 
         Map<LocalDate, List<LedgerEvent>> byDay = new TreeMap<>();
         all.forEach(e -> byDay.computeIfAbsent(e.gameDay(), k -> new ArrayList<>()).add(e));

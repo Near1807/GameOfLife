@@ -26,9 +26,11 @@ public record GameConfig(
         Habit habit,
         Checkin checkin,
         Streak streak,
+        Fight fight,
         Weapon weapon,
+        Armor armor,
         Ascension ascension,
-        Stages stages,
+        Shop shop,
         StatLevels statLevels,
         Loot loot) {
 
@@ -61,12 +63,15 @@ public record GameConfig(
 
     public record Ascension(double perAscension) {}
 
-    public record Stages(int count, double baseTarget, double growth, double clearRewardCoins) {
-        /** Boss HP of stage k (1-based). */
-        public double target(int stage) {
-            return Math.round(baseTarget * Math.pow(growth, stage - 1)); // whole HP, as in the brief table
-        }
-    }
+    public record Fight(double bossBaseHp, double bossHpGrowth, double bossBaseAtk, double bossAtkPerBoss,
+                        double ascensionBossScale, double heroBaseHp, double heroHpPerVitalityLevel,
+                        double fullShieldHeal, double killRewardCoins, String defeatMode, double hardModeCoinLoss,
+                        int pauseMaxDays, int pauseWindowDays, int heroEveryNLevels, int regionEveryNBosses) {}
+
+    public record Armor(double hpPerLevel, double reductionPerLevel, double maxReduction, double baseCost,
+                        double costGrowth) {}
+
+    public record Shop(int maxCharms, int forecastDays) {}
 
     public record StatLevels(double base, double growth) {}
 

@@ -31,8 +31,9 @@ public class AppConfig {
      * Tests replace this bean with a clock they can move.
      */
     @Bean
-    public Clock clock() {
-        return Clock.systemUTC();
+    public Clock clock(@Value("${gamelife.clock-offset-hours:0}") long offsetHours) {
+        // offset: a testing aid only, to see "the morning after" without waiting (README).
+        return offsetHours == 0 ? Clock.systemUTC() : Clock.offset(Clock.systemUTC(), java.time.Duration.ofHours(offsetHours));
     }
 
     /** SQLite data source. Creates the folder of the database file if needed. */

@@ -7,7 +7,7 @@ export interface Settings {
 }
 
 const KEY = 'gamelife.settings';
-const DEFAULTS: Settings = { reducedEffects: false, sound: true };
+const DEFAULTS: Settings = { reducedEffects: false, sound: false }; // sound off by default (brief 11)
 
 export function loadSettings(): Settings {
   try {

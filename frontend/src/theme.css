@@ -687,3 +687,57 @@ button { -webkit-user-select: none; user-select: none; }
 @media (min-width: 700px) { .tiles { grid-template-columns: repeat(4, 1fr); } }
 .tile { padding: 14px; border-radius: var(--radius); background: var(--surface-2); border: 1px solid var(--border); }
 .tile .big-num { font-size: 26px; }
+
+/* ---------------------------------------------------------------- battle arena (brief 11) */
+.arena-card { border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border-strong); box-shadow: var(--shadow), var(--glow-violet); margin-bottom: var(--gap); background: var(--surface); }
+.arena { position: relative; overflow: hidden; background-color: #06060a; background-repeat: repeat-x; background-position: center bottom; image-rendering: pixelated; }
+.hud { position: absolute; top: 8px; width: min(44%, 220px); padding: 7px 9px; border-radius: 12px; background: rgba(8, 9, 16, 0.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid rgba(255, 255, 255, 0.08); z-index: 3; text-align: left; color: var(--text); font: inherit; }
+.hud-left { left: 8px; }
+.hud-right { right: 8px; cursor: pointer; }
+.hud-name { font-size: 12px; font-weight: 650; display: flex; align-items: center; gap: 5px; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-num { font-size: 11px; color: var(--text-2); margin-top: 3px; }
+.hud-defeats { font-size: 10.5px; color: var(--violet-soft); margin-top: 2px; }
+.fighter { position: absolute; z-index: 2; }
+.boss-fighter .sprite { transform-origin: bottom center; }
+.worn { display: flex; gap: 3px; justify-content: center; margin-top: -4px; }
+.worn-item { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: rgba(8, 9, 16, 0.7); border: 1px solid rgba(255, 255, 255, 0.12); overflow: hidden; }
+.worn-item .sprite { transform: scale(0.62); }
+.fx-layer { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+.projectile { position: absolute; left: 22%; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle, #fff, var(--cyan) 50%, transparent 72%); box-shadow: 0 0 18px var(--cyan); opacity: 0; animation: fly 0.45s cubic-bezier(0.4, 0, 0.6, 1) forwards; }
+.projectile.crit { width: 22px; height: 22px; background: radial-gradient(circle, #fff, var(--gold) 50%, transparent 72%); box-shadow: 0 0 26px var(--gold); }
+@keyframes fly { 0% { opacity: 1; transform: translate(0, 0) scale(0.6); } 85% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--travel, 200px), -10px) scale(1.4); } }
+.dmg { position: absolute; right: 16%; font-family: var(--font-display); font-weight: 800; font-size: 26px; color: #fff; text-shadow: 0 0 10px var(--boss), 0 2px 0 #000; opacity: 0; animation: dmg-up 1.2s 0.35s var(--ease) forwards; display: flex; flex-direction: column; align-items: center; }
+.dmg.crit { font-size: 40px; color: var(--gold); text-shadow: 0 0 18px var(--gold), 0 2px 0 #000; }
+.crit-label { font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; }
+@keyframes dmg-up { 0% { opacity: 0; transform: translateY(10px) scale(0.6); } 20% { opacity: 1; transform: translateY(0) scale(1.15); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-50px); } }
+.crit-flash { position: absolute; inset: 0; pointer-events: none; z-index: 5; background: radial-gradient(circle at 75% 55%, rgba(251, 191, 36, 0.45), transparent 55%); animation: crit-flash 0.6s 0.4s ease-out both; }
+@keyframes crit-flash { from { opacity: 1; } to { opacity: 0; } }
+.sprite.anim.hurt { animation-name: sprite-strip, hurt; animation-timing-function: steps(var(--frames, 4)), ease-out; animation-iteration-count: infinite, 1; animation-duration: 0.667s, 0.9s; }
+@keyframes hurt { 0%, 30% { filter: none; } 45% { filter: brightness(2.5) sepia(1) hue-rotate(-50deg) saturate(4); transform: translateX(-6px); } 60% { transform: translateX(4px); } 100% { filter: none; transform: none; } }
+.sprite.anim.boss-strike { animation-name: sprite-strip, strike; animation-timing-function: steps(var(--frames, 4)), var(--ease); animation-iteration-count: infinite, 1; animation-duration: 0.667s, 0.7s; }
+@keyframes strike { 30% { transform: translateX(-40%) scale(1.05); } 100% { transform: none; } }
+.recap { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 6; display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px; background: rgba(8, 9, 16, 0.85); border: 1px solid rgba(167, 139, 250, 0.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); animation: page-in 0.3s var(--ease); }
+.recap .btn { min-height: 38px; padding: 0 14px; flex-shrink: 0; }
+.arena-foot { padding: 12px 14px; background: var(--surface-2); border-top: 1px solid var(--border); }
+.victory.defeat .victory-title { color: var(--violet-soft); text-shadow: 0 0 30px rgba(139, 92, 246, 0.8); }
+.victory.intro .victory-title { color: var(--boss); text-shadow: 0 0 30px rgba(255, 77, 109, 0.7); font-size: 32px; }
+.victory.defeat .victory-burst { background: radial-gradient(circle at 50% 45%, rgba(139, 92, 246, 0.3), rgba(6, 7, 12, 0.92) 70%); }
+.victory.intro .victory-burst { background: radial-gradient(circle at 50% 45%, rgba(255, 77, 109, 0.25), rgba(6, 7, 12, 0.92) 70%); }
+.sprite.entering { animation: sprite-strip 0.667s steps(4) infinite, enter 0.7s var(--ease); }
+@keyframes enter { from { transform: scale(0.4) translateY(30px); opacity: 0; filter: brightness(3); } to { transform: none; opacity: 1; filter: none; } }
+.orb { position: fixed; width: 12px; height: 12px; border-radius: 50%; pointer-events: none; z-index: 65; box-shadow: 0 0 14px currentColor; background: currentColor; }
+
+/* ---------------------------------------------------------------- shop */
+.choice-strip { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: -6px 0 14px; font-size: 12.5px; color: var(--text-2); }
+.choice-strip span { display: inline-flex; align-items: center; gap: 5px; }
+.item-frame { width: 80px; height: 80px; flex-shrink: 0; display: grid; place-items: center; border-radius: 16px; background: radial-gradient(circle at 50% 60%, rgba(139, 92, 246, 0.28), var(--surface-2) 70%); border: 1px solid var(--border); }
+.item-frame.locked .sprite { filter: brightness(0.25) grayscale(1); }
+
+/* ---------------------------------------------------------------- achievements */
+.badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.badge { display: flex; gap: 12px; padding: 12px; border-radius: var(--radius); background: var(--surface-2); border: 1px solid var(--border); opacity: 0.75; }
+.badge.on { opacity: 1; border-color: rgba(251, 191, 36, 0.4); box-shadow: 0 0 18px rgba(251, 191, 36, 0.12); }
+.badge-icon { width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; display: grid; place-items: center; background: var(--surface); color: var(--text-3); border: 1px solid var(--border); }
+.badge.on .badge-icon, .badge-icon.on { color: var(--gold); background: var(--gold-soft); border-color: rgba(251, 191, 36, 0.4); box-shadow: var(--glow-gold); }
+.unlock { position: fixed; left: 50%; top: 18px; transform: translateX(-50%); z-index: 95; display: flex; gap: 12px; align-items: center; padding: 10px 16px 10px 10px; border-radius: 16px; background: var(--surface-2); backdrop-filter: blur(var(--blur)); -webkit-backdrop-filter: blur(var(--blur)); border: 1px solid rgba(251, 191, 36, 0.45); box-shadow: var(--shadow), var(--glow-gold); animation: unlock-in 0.5s var(--ease); pointer-events: none; }
+@keyframes unlock-in { from { opacity: 0; transform: translate(-50%, -20px) scale(0.9); } to { opacity: 1; transform: translate(-50%, 0); } }

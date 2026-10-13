@@ -6,11 +6,10 @@ import react from '@vitejs/plugin-react';
 // API calls to /api are forwarded to the Spring Boot backend on port 8080.
 export default defineConfig({
   plugins: [react()],
-  // Sprites live in content/sprites (shared with the content tools), served at the root:
-  // content/sprites/hero/hero_hacker_idle.png -> /hero/hero_hacker_idle.png
-  publicDir: '../content/sprites',
+  // Game pictures are NOT bundled: the backend serves the content folder at /content/** from
+  // disk, so new pictures appear after "reload content" without a rebuild (brief 12b).
   server: {
-    proxy: { '/api': 'http://localhost:8080' },
+    proxy: { '/api': 'http://localhost:8080', '/content': 'http://localhost:8080' },
   },
   test: {
     environment: 'jsdom',

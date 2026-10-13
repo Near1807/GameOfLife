@@ -41,47 +41,139 @@ export interface GameState {
   statXp: Record<string, number>;
   weaponLevel: number;
   nextUpgradeCost: number;
-  stage: StageView;
+  fight: FightView;
+  loadout: Loadout;
+  look: Look;
   chain: { valid: boolean; brokenAtId: number; message: string };
   log: LedgerEvent[];
 }
 
-export interface Boss {
-  stage: number;
-  name: string;
-  title: string;
-  sprite: string;
-}
-
-export interface StageView {
-  stage: number;
-  stageCount: number;
-  target: number;
+export interface Attack {
+  id: number;
+  date: string;
+  atk: number;
   damage: number;
-  hp: number;
-  overkill: number;
-  cleared: boolean;
-  ascendReady: boolean;
-  ascensions: number;
-  ascensionMultiplier: number;
-  weekStart: string;
-  endsAt: string;
-  boss: Boss;
-  rewardCoins: number;
-  map: { stage: number; name: string; sprite: string; target: number; status: 'CLEARED' | 'CURRENT' | 'LOCKED' }[];
+  blocked: number;
+  heal: number;
+  shield: number;
+  protectedDay: boolean;
 }
 
+/** The losable boss fight (brief 9.1), as computed by the backend from the ledger. */
+export interface FightView {
+  fightId: string;
+  ascensions: number;
+  boss: number;
+  bossName: string;
+  bossTitle: string;
+  bossSprite: string;
+  bossFrames: number;
+  variant: boolean;
+  bossHp: number;
+  bossMaxHp: number;
+  bossAtk: number;
+  heroHp: number;
+  heroMaxHp: number;
+  armorReduction: number;
+  todayXp: number;
+  dailyGoal: number;
+  shieldToday: number;
+  protectedToday: boolean;
+  expectedHit: number;
+  defeatsByThisBoss: number;
+  kills: number;
+  falls: number;
+  ascendReady: boolean;
+  bossFiles: number;
+  region: string | null;
+  heroSprite: string;
+  heroFrames: number;
+  defeatMode: string;
+  killReward: number;
+  pausedToday: boolean;
+  pausesLeft: number;
+  recentAttacks: Attack[];
+  recentFalls: number[];
+  map: { number: number; name: string; sprite: string; frames: number; status: 'CLEARED' | 'CURRENT' | 'LOCKED'; defeats: number }[];
+}
+
+export interface Item {
+  id: string;
+  name: string;
+  kind: 'weapon' | 'armor' | 'charm' | 'outfit' | 'skin' | 'theme';
+  slot: string;
+  price: number;
+  bonus: { damagePct: number; maxHp: number; reduction: number };
+  effect: string | null;
+  value: number;
+  requires: { stat: string; level: number } | null;
+  description: string;
+  sprite: string | null;
+  frames: number;
+  tokens: Record<string, string>;
+}
+
+export interface Loadout {
+  weaponLevel: number;
+  armorLevel: number;
+  owned: string[];
+  equipped: Record<string, string>;
+  charms: string[];
+}
+
+export interface Look {
+  themeId: string | null;
+  themeTokens: Record<string, string>;
+  heroSprite: string;
+  heroFrames: number;
+  arenaFilter: string | null;
+  worn: Item[];
+}
+
+export interface ShopItem {
+  item: Item;
+  status: 'EQUIPPED' | 'OWNED' | 'LOCKED' | 'AFFORDABLE' | 'TOO_EXPENSIVE';
+  lockReason: string | null;
+  effectText: string;
+}
+
+export interface Upgrade {
+  slot: 'weapon' | 'armor';
+  level: number;
+  cost: number;
+  status: 'AFFORDABLE' | 'TOO_EXPENSIVE';
+  effectText: string;
+}
+
+export interface ShopView {
+  balance: number;
+  averageDailyXp: number;
+  weapon: Upgrade;
+  armor: Upgrade;
+  items: ShopItem[];
+  maxCharms: number;
+}
+
+export interface Catalog {
+  bosses: { number: number; name: string; title: string; file: string; frames: number }[];
+  heroes: { number: number; name: string; file: string; frames: number }[];
+  regions: { number: number; name: string; file: string }[];
+  items: Item[];
+  warnings: string[];
+}
+
+/** Calendar-week report (brief 9.1). It does not control the boss. */
 export interface WeekReview {
   weekStart: string;
   previousWeek: string | null;
   nextWeek: string | null;
   currentWeek: boolean;
-  stage: number;
-  bossName: string;
-  bossSprite: string;
-  target: number;
-  damage: number;
-  cleared: boolean;
+  damageDealt: number;
+  damageTaken: number;
+  damageBlocked: number;
+  falls: number;
+  bossesDefeated: number;
+  bossNames: string[];
   days: { date: string; xp: number; counted: boolean; rest: boolean; future: boolean }[];
   statXp: Record<string, number>;
   tasksDone: number;
@@ -105,6 +197,16 @@ export interface Dashboard {
   currentStreak: number;
   countedDaysAllTime: number;
   bossesDefeated: number;
+}
+
+export interface AchievementStatus {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
+  current: number;
+  target: number;
 }
 
 export interface Stat {
@@ -219,7 +321,16 @@ export const api = {
   character: () => request<Character>('GET', '/api/character'),
   review: (week?: string) => request<WeekReview>('GET', '/api/review' + (week ? `?week=${week}` : '')),
   dashboard: (days = 30) => request<Dashboard>('GET', `/api/dashboard?days=${days}`),
-  ascend: () => request<ActionResult>('POST', '/api/ascend'),
+  fight: () => request<FightView>('GET', '/api/fight'),
+  pause: () => request<ActionResult>('POST', '/api/fight/pause', {}),
+  ascend: () => request<ActionResult>('POST', '/api/fight/ascend'),
+  shop: () => request<ShopView>('GET', '/api/shop'),
+  buy: (itemId: string) => request<ActionResult>('POST', '/api/shop/buy', { itemId, confirm: true }),
+  upgrade: (slot: 'weapon' | 'armor') => request<ActionResult>('POST', '/api/shop/upgrade', { slot, confirm: true }),
+  equip: (itemId: string, on: boolean) => request<ActionResult>('POST', '/api/shop/equip', { itemId, on }),
+  content: () => request<Catalog>('GET', '/api/content'),
+  achievements: () => request<AchievementStatus[]>('GET', '/api/achievements'),
+  reloadContent: () => request<Catalog>('POST', '/api/content/reload'),
 
   tasks: () => request<TaskView[]>('GET', '/api/tasks'),
   suggestions: (q = '') => request<Suggestion[]>('GET', `/api/tasks/suggestions?q=${encodeURIComponent(q)}`),
