@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Coins, LayoutDashboard, ListTodo, Repeat, Settings as SettingsIcon, Timer, User, WifiOff, Zap } from 'lucide-react';
-import { api, type ActionResult, type Character, type GameState, type LedgerEvent, type Meta, type TimerView } from './api';
+import { AlertTriangle, Coins, LayoutDashboard, ListTodo, Repeat, Settings as SettingsIcon, Swords, Timer, User, WifiOff, Zap } from 'lucide-react';
+import { api, type ActionResult, type Character, type GameState, type LedgerEvent, type Meta, type StageView, type TimerView } from './api';
+import { CampaignScreen } from './screens/CampaignScreen';
 import { HabitsScreen } from './screens/HabitsScreen';
 import { HeroScreen } from './screens/HeroScreen';
 import { HomeScreen } from './screens/HomeScreen';
@@ -9,6 +10,7 @@ import { TasksScreen } from './screens/TasksScreen';
 import { TimerScreen } from './screens/TimerScreen';
 import { chime, loadSettings, saveSettings, type Settings } from './settings';
 import type { Act, Screen } from './types';
+import { BossDefeated } from './ui/BossDefeated';
 import { CountUp } from './ui/CountUp';
 import { TimerQuestion } from './ui/TimerQuestion';
 import { XpPops, type Pop } from './ui/XpPops';
@@ -18,6 +20,7 @@ const NAV: { id: Screen; label: string; Icon: typeof Timer }[] = [
   { id: 'tasks', label: 'Quests', Icon: ListTodo },
   { id: 'timer', label: 'Focus', Icon: Timer },
   { id: 'habits', label: 'Habits', Icon: Repeat },
+  { id: 'campaign', label: 'Boss', Icon: Swords },
   { id: 'hero', label: 'Hero', Icon: User },
 ];
 
@@ -34,6 +37,8 @@ export default function App() {
   const [version, setVersion] = useState(0); // bumped after each change so screens reload
   const [settings, setSettings] = useState<Settings>(loadSettings);
   const [offline, setOffline] = useState(false);
+  const [victory, setVictory] = useState<StageView | null>(null);
+  const lastStage = useRef<StageView | null>(null);
   const toastTimer = useRef<number>(undefined);
 
   const showToast = useCallback((msg: string) => {
@@ -45,6 +50,13 @@ export default function App() {
   const refresh = useCallback(async () => {
     try {
       const [s, c] = await Promise.all([api.state(), api.character()]);
+      // Boss just died in this session: celebrate (brief 11). Not on first load.
+      const before = lastStage.current;
+      if (before && !before.cleared && s.stage.cleared && before.weekStart === s.stage.weekStart) {
+        setVictory(s.stage);
+        window.setTimeout(() => setVictory(null), 1500);
+      }
+      lastStage.current = s.stage;
       setState(s);
       setCharacter(c);
       setOffline(false);
@@ -194,6 +206,7 @@ export default function App() {
                 clearTask={() => setFocusTaskId(null)} onTimer={setTimer} onError={showToast} />
             )}
             {screen === 'habits' && <HabitsScreen meta={meta} state={state} act={act} version={version} refresh={refresh} onError={showToast} />}
+            {screen === 'campaign' && <CampaignScreen state={state} meta={meta} act={act} version={version} />}
             {screen === 'hero' && character && <HeroScreen character={character} state={state} />}
             {screen === 'settings' && <SettingsScreen settings={settings} onSettings={changeSettings} refresh={refresh} onMessage={showToast} />}
           </div>
@@ -209,7 +222,8 @@ export default function App() {
       {timer && timer.status === 'ASK' && (
         <TimerQuestion timer={timer} previewXp={timer.countedMinutes * (meta?.timer.xpPerMinute ?? 1) * mult} onAnswer={answerTimer} />
       )}
-      <XpPops pops={pops} />
+      {!victory && <XpPops pops={pops} />}
+      {victory && <BossDefeated stage={victory} />}
       {toast && <div className="toast">{toast}</div>}
     </div>
   );

@@ -7,6 +7,7 @@ import { nextAction } from '../nextAction';
 import { statStyle } from '../stats';
 import type { Act, Screen } from '../types';
 import { Bar } from '../ui/Bar';
+import { BossCard } from '../ui/BossCard';
 import { Card } from '../ui/Card';
 import { CountUp } from '../ui/CountUp';
 import { HeroPortrait } from '../ui/HeroPortrait';
@@ -92,6 +93,9 @@ export function HomeScreen(props: {
       </Card>
 
       <div className="grid">
+        {/* this week's boss (brief 9.1) */}
+        <BossCard stage={state.stage} onOpen={() => props.go('campaign')} />
+
         {/* today and wallet */}
         <Card>
           <div className="grid two" style={{ gap: 18 }}>

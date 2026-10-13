@@ -61,7 +61,12 @@ public record GameConfig(
 
     public record Ascension(double perAscension) {}
 
-    public record Stages(int count, double baseTarget, double growth) {}
+    public record Stages(int count, double baseTarget, double growth, double clearRewardCoins) {
+        /** Boss HP of stage k (1-based). */
+        public double target(int stage) {
+            return Math.round(baseTarget * Math.pow(growth, stage - 1)); // whole HP, as in the brief table
+        }
+    }
 
     public record StatLevels(double base, double growth) {}
 

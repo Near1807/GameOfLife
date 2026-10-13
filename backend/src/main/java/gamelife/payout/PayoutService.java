@@ -9,6 +9,7 @@ import gamelife.rules.LedgerFacts;
 import gamelife.rules.StatSplitter;
 import gamelife.rules.StreakCalculator;
 import gamelife.rules.StreakState;
+import gamelife.stage.StageService;
 import gamelife.time.GameTime;
 import org.springframework.stereotype.Service;
 
@@ -30,8 +31,10 @@ public class PayoutService {
     private final LedgerService ledger;
     private final GameConfig config;
     private final GameTime time;
+    private final StageService stages;
 
-    public PayoutService(LedgerService ledger, GameConfig config, GameTime time) {
+    public PayoutService(LedgerService ledger, GameConfig config, GameTime time, StageService stages) {
+        this.stages = stages;
         this.ledger = ledger;
         this.config = config;
         this.time = time;
@@ -73,6 +76,9 @@ public class PayoutService {
         NewEvent event = new NewEvent(req.key(), req.type(), req.module(), req.label(),
                 finalXp, finalXp, StatSplitter.split(base, req.tags()), meta);
         LedgerService.AppendResult result = ledger.append(event);
+        if (result.written() && finalXp.signum() > 0) {
+            stages.checkClear(); // the boss may have just died (brief 9.1)
+        }
         return new ActionResult(result.event(), result.written(), result.written() ? "Paid" : "Already counted");
     }
 

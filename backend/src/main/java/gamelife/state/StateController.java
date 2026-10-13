@@ -2,6 +2,7 @@ package gamelife.state;
 
 import gamelife.checkin.CheckinService;
 import gamelife.config.GameConfig;
+import gamelife.stage.StageService;
 import gamelife.ledger.HashChain;
 import gamelife.ledger.LedgerEvent;
 import gamelife.ledger.LedgerService;
@@ -32,12 +33,14 @@ public class StateController {
     private final PayoutService payout;
     private final TaskService tasks;
     private final CheckinService checkin;
+    private final StageService stages;
     private final GameConfig config;
     private final GameTime time;
 
     public StateController(LedgerService ledger, PayoutService payout, TaskService tasks, CheckinService checkin,
-                           GameConfig config, GameTime time) {
+                           StageService stages, GameConfig config, GameTime time) {
         this.checkin = checkin;
+        this.stages = stages;
         this.ledger = ledger;
         this.payout = payout;
         this.tasks = tasks;
@@ -51,6 +54,7 @@ public class StateController {
     public record GameState(LocalDate today, Instant serverNow, BigDecimal balance, BigDecimal xpToday,
                             StreakInfo streak, PayoutService.Multipliers multipliers,
                             Map<String, BigDecimal> statXp, int weaponLevel, double nextUpgradeCost,
+                            StageService.StageView stage,
                             HashChain.Check chain, List<LedgerEvent> log) {}
 
     @GetMapping("/state")
@@ -67,7 +71,7 @@ public class StateController {
                 multToday, next);
         return new GameState(today, time.now(), LedgerFacts.balance(events), LedgerFacts.xpOnDay(events, today),
                 streak, payout.multipliersNow(events), LedgerFacts.statTotals(events), weaponLevel,
-                Math.round(nextCost * 100.0) / 100.0, HashChain.verify(events),
+                Math.round(nextCost * 100.0) / 100.0, stages.view(events), HashChain.verify(events),
                 ledger.latest(20));
     }
 

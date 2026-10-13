@@ -19,9 +19,9 @@ export function HeroScreen(props: { character: Character; state: GameState }) {
       <p className="page-sub">Who you are becoming. Stats only grow from real, confirmed actions.</p>
       <div className="grid two">
         <Card glow>
-          <div className="row" style={{ alignItems: 'flex-start', gap: 18 }}>
+          <div className="row wrap" style={{ alignItems: 'flex-start', gap: 18 }}>
             <HeroPortrait scale={5} />
-            <div className="col grow">
+            <div className="col grow" style={{ minWidth: 190 }}>
               <span className="level-badge" style={{ alignSelf: 'flex-start' }}>
                 <Crown size={14} /> Level {c.overallLevel}
               </span>
@@ -33,7 +33,7 @@ export function HeroScreen(props: { character: Character; state: GameState }) {
               <div className="label" style={{ marginTop: 10 }}>
                 Gear
               </div>
-              <Slot icon={Sword} name="Weapon" value={`Level ${props.state.weaponLevel} · x${props.state.multipliers.weapon.toFixed(2)} XP`} />
+              <Slot icon={Sword} name="Weapon" value={`Lv ${props.state.weaponLevel} · x${props.state.multipliers.weapon.toFixed(2)} XP`} />
               <Slot icon={Shield} name="Armor" value="Empty" />
               <Slot icon={Gem} name="Charm" value="Empty" />
             </div>

@@ -4,7 +4,75 @@ Every assumption and default applied while building GameLife. Section numbers re
 brief; "v2" refers to the version 2 upgrade request, which wins where the two disagree. Numbers
 are in `config/gamelife.json`, rules are in the file named next to them.
 
-## Version 2 (steps 1 and 2 done; stopped for review as asked)
+## Version 2, step 3 (weekly boss, review, stats dashboard, new art)
+
+Owner decisions applied: keep the level formula; keep the stricter "Balanced" rule; the daily goal
+is config (`home.dailyXpGoal`, 100); hero and boss art moved from step 5 into step 3.
+
+### Weekly boss (brief 9.1, v2 4.4)
+- Rules in `stage/StageRules.java`, pure and computed from the ledger. A game week runs Monday
+  04:00 to Monday 04:00. Damage = the final XP of the week (un-ticks count negative).
+- Stage fought this week = 1 + bosses killed in earlier weeks since the last ascension. A week
+  without a kill therefore replays the same stage, and because damage only counts the current week,
+  the boss is back to full HP. No other penalty.
+- Boss HP = 800 x 1.3^(k-1), rounded to whole HP. **Brief table mismatch:** stage 7 is 3,861 with
+  the formula (800 x 1.3^6 = 3,861.45); the brief's table says 3,862. All other stages match. The
+  formula was kept, as for the level curve.
+- The kill happens at once, inside the payment that crosses the HP: a STAGE_CLEARED event with key
+  `stage:{ascensions}:{weekStart}` (so once per week and cycle), XP 0, and a reward of
+  `stages.clearRewardCoins` = **100 coins** (configurable; set it to 0 for no reward). It is a
+  direct consequence of the owner's own confirmed act and cannot repeat, so it respects 3.2. It
+  gives no XP, so it is neither damage nor stat XP.
+- **Un-tick after a kill:** the damage goes back down, but the kill stays (the ledger is
+  append-only). Accepted: the owner does not cheat himself, and estimates are trusted (brief 6).
+- After stage 10 is cleared there is no boss until the owner ascends. Ascension (New Game+) needs a
+  second tap on the Campaign screen. It writes ASCEND: stage back to 1, weapon level back to 0 (both
+  computed from the ledger), and every later payment gets x1.05 per ascension. Stats are kept.
+  An ascension in the middle of a week starts the new cycle at once, with zero damage.
+- Bosses are data: `content/bosses.json` (name, flavour line, sprite). Ten bosses: Bug Queen,
+  Doomscroll Wraith, Null Pointer, Merge Conflict, Burnout, Kernel Panic, Infinite Loop,
+  Distraction Phantom, Overclock, Entropy.
+
+### Feedback
+- Home shows the boss card (sprite, stage, HP bar, time left in the week). When damage goes up,
+  the sprite flashes and shakes and the bar drains.
+- A kill shows a full-screen "Boss defeated" for 1.4 s with sparks and the coin reward. It never
+  blocks a tap (pointer-events: none). It only appears when the kill happens during the session,
+  not when the app is opened on an already-dead boss. The XP pop is held back while it shows.
+
+### Campaign screen ("Boss" tab)
+- Six tabs on the phone now: Home, Quests, Focus, Habits, Boss, Hero.
+- Boss: the boss card, the campaign map (ten nodes: cleared, current, locked as a silhouette), the
+  ascension card when ready, and the rules.
+- Weekly review: week navigation, the stage result (defeated, in progress, or survived and
+  replays), XP per day with the goal line, stat XP per stat, quests, focus time, habits, average
+  mood, streak at the end of the week, skipped habits (scheduled days before today, after creation,
+  not rest days), and CORRECTION events (none can be written yet; the list is ready).
+- Stats dashboard: last 7, 30 or 90 days; XP of the period, best streak ever, focus hours, bosses
+  defeated, XP per day, streak history, and stat XP per stat.
+
+### Charts and colours
+- Hand-made SVG charts (no library), one series each with the card title naming it, hover or tap
+  for exact values, and dashed goal lines.
+- The seven stat colours were re-picked and checked with a palette validator for dark mode:
+  lightness band, contrast, and colour-blind separation. One pair (blue Intellect next to fuchsia
+  Creativity) sits in the "allowed with a second cue" band. Every stat always shows its icon and
+  name too, so colour is never the only cue. New colours: Strength red, Creativity fuchsia,
+  Intellect blue, Discipline orange, Social green, Vitality violet, Spirit teal.
+
+### Pixel art (brief 11, 12; v2 4.9)
+- `content/tools/make-sprites.mjs` (no dependencies; `npm run sprites`) draws every sprite into
+  a grid of palette indices, so an off-palette colour cannot happen. It uses shapes, mirroring,
+  top-left shading and an automatic 1-pixel outline.
+- Hero (32x32, 4-frame idle at 6 fps): a hooded hacker-mage in an indigo robe, with a glowing cyan
+  visor, a chest rune, a gold belt and a wooden staff topped by a crystal orb. The orb sparkles and
+  the body bobs.
+- Bosses (64x64, 4-frame idle): three body designs (cyber beetle, hooded wraith, mechanical eye),
+  recoloured with palette ramps into ten bosses. They bob and their accents pulse.
+- These are my own designs, not a licensed pack. I think they are clean enough to ship. If you
+  want a different look later, replace the PNG files with the same names and sizes.
+
+## Version 2, steps 1 and 2
 
 ### Design system (v2 section 3)
 - Free default theme "Nebula" in `frontend/src/theme.css`, all as CSS tokens: near-black with soft
@@ -15,7 +83,7 @@ are in `config/gamelife.json`, rules are in the file named next to them.
   internet access (no Google Fonts call from the phone).
 - Icons: Lucide (`lucide-react` 1.45.0), one set everywhere. Stat icons: Strength dumbbell,
   Creativity palette, Intellect brain, Discipline target, Social users, Vitality heart-pulse,
-  Spirit sparkles (`frontend/src/stats.ts`).
+  Spirit sparkles (`frontend/src/stats.ts`). Stat colours were changed in step 3 (see above).
 - Removed: terminal headings, ASCII mood faces, blinking cursor, scanlines (and its setting),
   console log (replaced by a "Recent activity" feed), monospace body text.
 - Layout: bottom floating tab bar on phones, side rail from 900 px wide, two-column grids on
@@ -24,8 +92,7 @@ are in `config/gamelife.json`, rules are in the file named next to them.
   scale, check pop, flame flicker, hero lunge on payout, floating "+XP" with its stat split.
   All of it is turned off by the reduced-effects switch and by the system "reduce motion" setting.
 - Pixel art only as framed artwork (hero portrait), scaled by whole numbers, never smoothed.
-  **The hero sprite is still the v1 placeholder**: new hero and boss art is step 5 of the
-  requested order, so it was not done yet.
+  The hero and boss art was redone in step 3 (see above).
 
 ### Stat tags (v2 4.1)
 - One component, `StatTagPicker`, used by quests, focus, habits and the check-in: seven coloured
@@ -62,7 +129,6 @@ are in `config/gamelife.json`, rules are in the file named next to them.
   goal (config `home.dailyXpGoal` = 100, from brief 6), coins against the cost of the next weapon
   upgrade (150 x 1.35^n, the first real thing to buy), streak with multiplier, freezes, next
   milestone and the "Rest" button, next best action, mood check-in, quick-add, recent activity.
-- The boss and weekly stage card is step 3, so it is not on the home screen yet.
 - Next best action (`frontend/src/nextAction.ts`): check-in if not done; else a habit scheduled
   today and not done; else the open quest that trains the lowest stat (shortest first); else a
   focus block. Its "Done" button is the explicit confirmation of that one item, like ticking it.
@@ -99,10 +165,10 @@ are in `config/gamelife.json`, rules are in the file named next to them.
 5. **Tests of section 14 not yet written**, because their feature belongs to a later milestone:
    "a purchase with too low a balance is refused" (milestone 4) and "the content validator
    rejects each violation" (milestone 5).
-6. **Art (11, 12).** No licensed asset pack is integrated yet. The hero is still the placeholder
-   drawn by `content/tools/make-placeholder-sprites.mjs` (32x32, palette colours, 4-frame idle);
-   v2 step 5 replaces it. The pixel flame and coin icons are no longer used by the interface
-   (Lucide icons instead) but stay as contract examples.
+6. **Art (11, 12).** No licensed asset pack: the hero and the ten bosses are original sprites
+   drawn by `content/tools/make-sprites.mjs` (see version 2, step 3). The old
+   `make-placeholder-sprites.mjs` only still draws the flame and coin icons, which the interface
+   no longer uses; they stay as contract examples.
 
 ## Ledger and data (5)
 

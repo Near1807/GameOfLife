@@ -1,4 +1,5 @@
-// Draws the placeholder sprites of milestones 1-2 from ASCII grids and writes them as PNG.
+// Draws the two small UI icons of milestones 1-2 (flame, coin) from ASCII grids. The hero and the
+// bosses are drawn by make-sprites.mjs.
 // No dependencies: only Node's built-in zlib. Run from the repo root:
 //   node content/tools/make-placeholder-sprites.mjs
 //
@@ -80,62 +81,6 @@ function grid(leftHalves, colors, size) {
   });
 }
 
-function sheet(frames) {
-  return frames[0].map((_, y) => frames.flatMap((f) => f[y]));
-}
-
-// Hero: a hooded hacker-wizard holding a laptop with a glowing logo. 32x32.
-const HERO_COLORS = { o: 1, d: 27, h: 28, H: 29, S: 30, s: 31, e: 12, l: 4, L: 5, g: 12, G: 13, b: 2, c: 2 };
-const HERO = [
-  '................',
-  '................',
-  '............oooo',
-  '..........oohhhh',
-  '.........ohhhhhh',
-  '........ohhHhhhh',
-  '........ohHhhhhh',
-  '.......ohHhhhhhh',
-  '.......ohhhhoooo',
-  '.......ohhhoSSSS',
-  '.......ohhoSssss',
-  '......ohhhoseess',
-  '......ohhhoSssss',
-  '......ohhhhoSsss',
-  '.....ohhhhhhoooo',
-  '.....ohdhhhhhhhh',
-  '....ohddhhhhhhhh',
-  '....ohddhhoooooo',
-  '....ohddhollllll',
-  '...ohdddhollllLg',
-  '...ohdddhollllgg',
-  '...ohddssolllLgg',
-  '...ohddssollllll',
-  '...ohdddhooooooo',
-  '...ohdddhhhhhhhh',
-  '..ohddddhhhhhhhh',
-  '..ohddddhhhhhhhh',
-  '..ohdddddhhhhhhh',
-  '..oooooooooooooo',
-  '..........obbbo.',
-  '..........obbbo.',
-  '........cccccccc',
-];
-
-function heroFrame({ shift = 0, blink = false, glow = false }) {
-  let rows = HERO.map((r) => {
-    let row = r;
-    if (blink) row = row.replace(/e/g, 'S');
-    if (glow) row = row.replace(/g/g, 'G');
-    return row;
-  });
-  if (shift) {
-    // bob: the body above the legs moves down one pixel, legs and shadow stay
-    const body = rows.slice(0, 29);
-    rows = ['................', ...body.slice(0, 28), ...rows.slice(29)];
-  }
-  return grid(rows, HERO_COLORS, 32);
-}
-
 // Streak flame icon, 16x16.
 const FLAME_COLORS = { r: 26, o: 21, y: 22, w: 23 };
 const FLAME = [
@@ -187,11 +132,7 @@ function write(rel, pixels) {
   console.log('wrote', path.relative(process.cwd(), file), `${pixels[0].length}x${pixels.length}`);
 }
 
-write('hero/hero_hacker_idle.png', sheet([
-  heroFrame({}),
-  heroFrame({ shift: 1, glow: true }),
-  heroFrame({ shift: 1 }),
-  heroFrame({ blink: true, glow: true }),
-]));
+// The hero is now drawn by make-sprites.mjs.
+
 write('ui/icon_flame.png', grid(FLAME, FLAME_COLORS, 16));
 write('ui/icon_coin.png', grid(COIN, COIN_COLORS, 16));

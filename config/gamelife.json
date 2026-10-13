@@ -77,15 +77,16 @@
   },
 
   "ascension": {
-    "_comment": "Used from milestone 4. multiplier = perAscension ^ number of ASCEND events.",
+    "_comment": "multiplier = perAscension ^ number of ASCEND events (New Game+ after stage 10).",
     "perAscension": 1.05
   },
 
   "stages": {
-    "_comment": "Used from milestone 3. target(k) = baseTarget x growth ^ (k - 1).",
+    "_comment": "Weekly boss (brief 9.1). Boss HP of stage k = baseTarget x growth ^ (k - 1). A week = Monday 04:00 to Monday 04:00. clearRewardCoins: coins paid once when a boss dies (no XP, no stat XP).",
     "count": 10,
     "baseTarget": 800,
-    "growth": 1.3
+    "growth": 1.3,
+    "clearRewardCoins": 100
   },
 
   "statLevels": {

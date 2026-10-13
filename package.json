@@ -11,6 +11,6 @@
     "start": "mvn -B -f backend/pom.xml spring-boot:run",
     "dev:frontend": "npm --prefix frontend run dev",
     "backup": "node scripts/backup.mjs",
-    "sprites": "node content/tools/make-placeholder-sprites.mjs"
+    "sprites": "node content/tools/make-sprites.mjs"
   }
 }
