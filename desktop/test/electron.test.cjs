@@ -66,16 +66,20 @@ test('the shell opens the app on a local port, stays single, and stops the serve
 
   // a second start does not open a second app: it focuses the first and exits
   await app.evaluate(({ app: a }) => { globalThis.secondStarts = 0; a.on('second-instance', () => { globalThis.secondStarts++; }); });
-  const second = spawn(app.process().spawnfile, [...extra, appDir], { env: appEnv({ GAMELIFE_DATA_DIR: dataDir }), stdio: 'ignore' });
+  // its output is kept so a failure on CI says why
+  const second = spawn(app.process().spawnfile, [...extra, appDir], { env: appEnv({ GAMELIFE_DATA_DIR: dataDir }), stdio: ['ignore', 'pipe', 'pipe'] });
+  let secondOutput = '';
+  second.stdout.on('data', (d) => { secondOutput += d; });
+  second.stderr.on('data', (d) => { secondOutput += d; });
   const code = await new Promise((r) => second.on('exit', r));
-  assert.strictEqual(code, 0);
+  assert.strictEqual(code, 0, `second start exited with ${code}: ${secondOutput}`);
   // the first app hears about it a moment later (on Windows often after the second has exited)
   let starts = 0;
   for (let i = 0; i < 50 && starts === 0; i++) {
     starts = await app.evaluate(() => globalThis.secondStarts);
     if (starts === 0) await new Promise((r) => setTimeout(r, 200));
   }
-  assert.strictEqual(starts, 1);
+  assert.strictEqual(starts, 1, `the first app did not get the second-instance event; second start said: ${secondOutput}`);
 
   // quit: the server stops cleanly and writes its exit backup
   const closed = new Promise((r) => app.process().on('exit', r));
