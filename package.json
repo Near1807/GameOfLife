@@ -11,6 +11,7 @@
     "start": "mvn -B -f backend/pom.xml spring-boot:run",
     "dev:frontend": "npm --prefix frontend run dev",
     "backup": "node scripts/backup.mjs",
+    "simulate": "mvn -B -q -f backend/pom.xml compile exec:java",
     "sprites": "node content/tools/make-sprites.mjs"
   }
 }

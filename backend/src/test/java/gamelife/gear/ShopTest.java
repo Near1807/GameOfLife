@@ -21,6 +21,7 @@ class ShopTest extends IntegrationTest {
     @Autowired FightService fight;
     @Autowired TaskService tasks;
     @Autowired PayoutService payout;
+    @Autowired gamelife.config.GameConfig config;
 
     private void earn(int minutes, String... tags) {
         tasks.tick(tasks.create("Earn " + minutes + clock.instant(), minutes, List.of(tags)).id());
@@ -56,8 +57,9 @@ class ShopTest extends IntegrationTest {
         shop.upgrade("weapon", true); // 150
         assertThat(coins()).isEqualTo(70.0);
         assertThat(gear.loadout().weaponLevel()).isEqualTo(1);
-        assertThat(payout.multipliersNow(ledger.all()).weapon()).isEqualTo(1.1);
-        assertThat(shop.view().weapon().cost()).isEqualTo(203.0); // 150 x 1.35
+        assertThat(payout.multipliersNow(ledger.all()).weapon()).isEqualTo(config.weapon().bonusPerLevel());
+        assertThat(shop.view().weapon().cost())
+                .isEqualTo((double) Math.round(150 * config.weapon().costGrowth())); // level 1 -> 2
     }
 
     @Test

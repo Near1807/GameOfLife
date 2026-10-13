@@ -28,6 +28,7 @@ class FightTest extends IntegrationTest {
     @Autowired CheckinService checkin;
     @Autowired RestDayService rest;
     @Autowired ShopService shop;
+    @Autowired gamelife.config.GameConfig config;
 
     /** Ticks a new task worth `minutes` base XP and returns the final XP paid. */
     private double earn(int minutes) {
@@ -64,7 +65,8 @@ class FightTest extends IntegrationTest {
         assertThat(count(EventType.STAGE_CLEARED)).isEqualTo(1);
         var v = fight.view();
         assertThat(v.boss()).isEqualTo(2);                 // the next boss appears the same day
-        assertThat(v.bossHp()).isEqualTo(v.bossMaxHp()).isEqualTo(1040.0); // overkill did not carry over
+        double boss2 = FightRules.bossMaxHp(2, 0, config.fight()); // 800 x growth
+        assertThat(v.bossHp()).isEqualTo(v.bossMaxHp()).isEqualTo(boss2); // overkill did not carry over
         assertThat(v.bossAtk()).isEqualTo(24.0);
         assertThat(LedgerFacts.balance(ledger.all()).doubleValue()).isEqualTo(xp + 100);
         fight.sync();
@@ -79,7 +81,7 @@ class FightTest extends IntegrationTest {
         tasks.untick(t.id());
         assertThat(count(EventType.STAGE_CLEARED)).isEqualTo(1);
         assertThat(fight.view().boss()).isEqualTo(2);
-        assertThat(fight.view().bossHp()).isEqualTo(1040.0); // the un-tick does not touch the new boss
+        assertThat(fight.view().bossHp()).isEqualTo(FightRules.bossMaxHp(2, 0, config.fight())); // un-tick does not touch the new boss
     }
 
     // ---------------------------------------------------------------- daily attack
@@ -211,7 +213,7 @@ class FightTest extends IntegrationTest {
         v = fight.view();
         assertThat(v.boss()).isEqualTo(1);
         assertThat(v.ascensions()).isEqualTo(1);
-        assertThat(v.bossMaxHp()).isEqualTo(880.0);         // stronger variant: 800 x 1.1
+        assertThat(v.bossMaxHp()).isEqualTo(880.0);         // stronger variant: 800 x (1 + 0.1 x 1 ascension)
         assertThat(v.variant()).isTrue();
         assertThat(v.ascendReady()).isFalse();
         assertThatThrownBy(() -> fight.ascend()).hasMessageContaining("Beat all");
