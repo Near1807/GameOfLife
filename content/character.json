@@ -1,0 +1,37 @@
+{
+  "_comment": "Character flavour, as data (brief 8). Class = the two highest stats (key: the two stat ids joined by '+' in the order of config stats). Rank = from the overall level. Edit freely; no code change needed.",
+  "contractVersion": 1,
+  "noClass": "Unawakened",
+  "balancedClass": "Polymath",
+  "classes": {
+    "STRENGTH+CREATIVITY": "Battle Bard",
+    "STRENGTH+INTELLECT": "Tactician",
+    "STRENGTH+DISCIPLINE": "Iron Monk",
+    "STRENGTH+SOCIAL": "Captain",
+    "STRENGTH+VITALITY": "Juggernaut",
+    "STRENGTH+SPIRIT": "Paladin",
+    "CREATIVITY+INTELLECT": "Artificer",
+    "CREATIVITY+DISCIPLINE": "Virtuoso",
+    "CREATIVITY+SOCIAL": "Bard",
+    "CREATIVITY+VITALITY": "Druid",
+    "CREATIVITY+SPIRIT": "Dreamweaver",
+    "INTELLECT+DISCIPLINE": "Code Monk",
+    "INTELLECT+SOCIAL": "Sage",
+    "INTELLECT+VITALITY": "Alchemist",
+    "INTELLECT+SPIRIT": "Technomancer",
+    "DISCIPLINE+SOCIAL": "Warden",
+    "DISCIPLINE+VITALITY": "Ranger",
+    "DISCIPLINE+SPIRIT": "Ascetic",
+    "SOCIAL+VITALITY": "Scout",
+    "SOCIAL+SPIRIT": "Cleric",
+    "VITALITY+SPIRIT": "Wanderer"
+  },
+  "ranks": [
+    { "fromLevel": 1, "name": "Novice" },
+    { "fromLevel": 8, "name": "Apprentice" },
+    { "fromLevel": 20, "name": "Adept" },
+    { "fromLevel": 40, "name": "Expert" },
+    { "fromLevel": 70, "name": "Master" },
+    { "fromLevel": 110, "name": "Legend" }
+  ]
+}

@@ -1,14 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
+import { Square, Timer } from 'lucide-react';
 import { api, type Meta, type TaskView, type TimerView } from '../api';
-import { TagChips } from '../components/TagChips';
+import { Card } from '../ui/Card';
+import { Ring } from '../ui/Ring';
+import { StatTagPicker } from '../ui/StatTagPicker';
 
 /**
- * Focus timer. Start = one tap on a length chip. The countdown is only a display: the
- * server measures time from its own timestamps (brief 3.2). When the block ends, the
- * Yes / No question appears (TimerQuestion, shown by App on every screen).
+ * Focus timer. Start = one tap on a length chip. The countdown is only a display: the server
+ * measures time from its own timestamps (brief 3.2). When the block ends, the Yes / No question
+ * appears on whatever screen is open.
  */
 export function TimerScreen(props: {
   meta: Meta;
+  multiplier: number;
   timer: TimerView | null;
   taskId: number | null;
   clearTask: () => void;
@@ -18,6 +22,7 @@ export function TimerScreen(props: {
   const [label, setLabel] = useState('');
   const [tags, setTags] = useState<string[] | null>(null);
   const [task, setTask] = useState<TaskView | null>(null);
+  const cfg = props.meta.timer;
 
   useEffect(() => {
     if (props.taskId === null) return setTask(null);
@@ -38,44 +43,56 @@ export function TimerScreen(props: {
     return <Running timer={props.timer} onStop={() => api.stopTimer(id).then(props.onTimer)} />;
   }
 
+  const shownTags = tags ?? task?.tags ?? cfg.defaultTags;
   return (
-    <div className="panel">
-      <h2>focus block</h2>
-      {task ? (
-        <div className="row" style={{ marginBottom: 10 }}>
-          <span className="grow">
-            on: <b className="cyan">{task.name}</b>
-          </span>
-          <button className="icon-btn" onClick={props.clearTask} aria-label="no task">
-            ✕
-          </button>
+    <div className="page">
+      <h1 className="page-title">Focus</h1>
+      <p className="page-sub">Pick a length to start. You confirm at the end, and only then it pays.</p>
+      <Card glow className="focus-card">
+        <Ring progress={1} dim size={220}>
+          <div className="ring-time">{String(cfg.defaultMinutes).padStart(2, '0')}:00</div>
+          <div className="label">ready</div>
+        </Ring>
+        {task ? (
+          <div className="row">
+            <Timer size={16} className="cyan" />
+            <span className="grow">
+              Working on <b className="cyan">{task.name}</b>
+            </span>
+            <button className="btn ghost" onClick={props.clearTask}>
+              Clear
+            </button>
+          </div>
+        ) : (
+          <input className="input" placeholder="What are you focusing on? (optional)" value={label} onChange={(e) => setLabel(e.target.value)} aria-label="timer label" />
+        )}
+        <div className="label" style={{ margin: '16px 0 8px' }}>
+          Stats it trains
         </div>
-      ) : (
-        <input
-          className="input"
-          placeholder="Focus (optional label)"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          aria-label="timer label"
-        />
-      )}
-      <p className="dim small">Tap a length to start. You will be asked at the end.</p>
-      <div className="chips" aria-label="timer length">
-        {props.meta.timer.minuteChips.map((m) => (
-          <button key={m} className={'chip' + (m === props.meta.timer.defaultMinutes ? ' selected' : '')} onClick={() => start(m)}>
-            {m}m
-          </button>
-        ))}
-      </div>
-      <div style={{ marginTop: 10 }}>
-        <TagChips stats={props.meta.stats} selected={tags ?? task?.tags ?? props.meta.timer.defaultTags} onChange={setTags} />
-      </div>
+        <StatTagPicker stats={props.meta.stats} selected={shownTags} onChange={setTags} />
+        <div className="label" style={{ margin: '18px 0 8px' }}>
+          Length · tap to start
+        </div>
+        <div className="chips" aria-label="timer length">
+          {cfg.minuteChips.map((m) => (
+            <button
+              key={m}
+              className={'chip grow' + (m === cfg.defaultMinutes ? ' selected' : '')}
+              aria-label={`${m} minutes`}
+              onClick={() => start(m)}
+            >
+              <span className="chip-main">{m}m</span>
+              <span className="chip-sub">+{Math.round(m * cfg.xpPerMinute * props.multiplier)}</span>
+            </button>
+          ))}
+        </div>
+      </Card>
     </div>
   );
 }
 
 /**
- * Countdown computed from the server's endsAt, corrected by the server/device clock offset.
+ * Countdown from the server's endsAt, corrected by the server/device clock offset.
  * Display only: App asks the server again when the block should be over.
  */
 function Running(props: { timer: TimerView; onStop: () => void }) {
@@ -94,18 +111,20 @@ function Running(props: { timer: TimerView; onStop: () => void }) {
   const mm = String(Math.floor(left / 60000)).padStart(2, '0');
   const ss = String(Math.floor((left % 60000) / 1000)).padStart(2, '0');
   return (
-    <div className="panel">
-      <h2>focusing: {t.label}</h2>
-      <div className="countdown">
-        {mm}:{ss}
-      </div>
-      <div className="bar">
-        <div style={{ width: `${100 - (left / total) * 100}%` }} />
-      </div>
-      <p className="dim small">You can close the app. The question waits for you.</p>
-      <button className="btn" onClick={props.onStop}>
-        stop early
-      </button>
+    <div className="page">
+      <h1 className="page-title">Focus</h1>
+      <p className="page-sub">You can close the app. The question waits for you.</p>
+      <Card glow>
+        <Ring progress={1 - left / total} size={280}>
+          <div className="ring-time">
+            {mm}:{ss}
+          </div>
+          <div className="muted small">{t.label}</div>
+        </Ring>
+        <button className="btn block" onClick={props.onStop}>
+          <Square size={16} /> Stop early
+        </button>
+      </Card>
     </div>
   );
 }

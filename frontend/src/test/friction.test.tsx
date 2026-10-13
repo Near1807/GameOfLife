@@ -9,7 +9,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { askingTimer, meta, paid } from './fixtures';
+import { askingTimer, meta, paid, state } from './fixtures';
 
 vi.mock('../api', async (importOriginal) => {
   const original = await importOriginal<typeof import('../api')>();
@@ -24,6 +24,7 @@ vi.mock('../api', async (importOriginal) => {
       archiveTask: vi.fn(),
       habits: vi.fn(),
       habitDone: vi.fn(),
+      restDays: vi.fn(),
       checkinToday: vi.fn(),
       checkin: vi.fn(),
       startTimer: vi.fn(),
@@ -33,10 +34,10 @@ vi.mock('../api', async (importOriginal) => {
 
 import { api } from '../api';
 import { TasksScreen } from '../screens/TasksScreen';
-import { QuickAdd } from '../components/QuickAdd';
-import { TimerQuestion } from '../components/TimerQuestion';
+import { QuickAdd } from '../ui/QuickAdd';
+import { TimerQuestion } from '../ui/TimerQuestion';
 import { HabitsScreen } from '../screens/HabitsScreen';
-import { CheckinRow } from '../components/CheckinRow';
+import { MoodPicker } from '../ui/MoodPicker';
 import { TimerScreen } from '../screens/TimerScreen';
 
 const mocked = api as unknown as Record<string, ReturnType<typeof vi.fn>>;
@@ -67,10 +68,15 @@ beforeEach(() => {
   mocked.tickTask.mockResolvedValue(paid);
   mocked.habits.mockResolvedValue([]);
   mocked.habitDone.mockResolvedValue(paid);
+  mocked.restDays.mockResolvedValue([]);
   mocked.checkinToday.mockResolvedValue({ mood: null });
   mocked.checkin.mockResolvedValue(paid);
   mocked.startTimer.mockResolvedValue(askingTimer);
 });
+
+const tasksScreen = () => (
+  <TasksScreen meta={meta} multiplier={1.1} act={act} version={0} refresh={() => {}} onError={() => {}} onFocus={() => {}} />
+);
 
 describe('friction: tap counts', () => {
   it('a known task on the list is done with 1 tap', async () => {
@@ -78,7 +84,7 @@ describe('friction: tap counts', () => {
       { id: 3, name: 'Dishes', expectedMinutes: 15, tags: [], done: false, xpPaid: 0, viaTimer: false },
     ]);
     const u = tapCounter();
-    render(<TasksScreen meta={meta} act={act} version={0} refresh={() => {}} onError={() => {}} onFocus={() => {}} />);
+    render(tasksScreen());
     await u.tap(await screen.findByLabelText('done: Dishes'));
     expect(u.taps).toBe(1);
     expect(mocked.tickTask).toHaveBeenCalledExactlyOnceWith(3);
@@ -86,16 +92,16 @@ describe('friction: tap counts', () => {
 
   it('a new task needs its name plus 1 chip', async () => {
     const u = tapCounter();
-    render(<QuickAdd meta={meta} onAdded={() => {}} onError={() => {}} />);
+    render(<QuickAdd meta={meta} multiplier={1.1} onAdded={() => {}} onError={() => {}} />);
     await u.type(screen.getByLabelText('task name'), 'Read paper');
-    await u.tap(screen.getByRole('button', { name: '30m' }));
+    await u.tap(screen.getByLabelText('30 minutes'));
     expect(u.taps).toBe(1);
     expect(mocked.createTask).toHaveBeenCalledExactlyOnceWith('Read paper', 30, undefined);
   });
 
   it('a new task can also be just its name plus Enter (preselected chip)', async () => {
     const u = tapCounter();
-    render(<QuickAdd meta={meta} onAdded={() => {}} onError={() => {}} />);
+    render(<QuickAdd meta={meta} multiplier={1.1} onAdded={() => {}} onError={() => {}} />);
     await u.type(screen.getByLabelText('task name'), 'Call bank{Enter}');
     expect(u.taps).toBe(0);
     expect(mocked.createTask).toHaveBeenCalledExactlyOnceWith('Call bank', 15, undefined);
@@ -104,7 +110,7 @@ describe('friction: tap counts', () => {
   it('a known task is put back on the list with 1 tap, and that pays nothing', async () => {
     mocked.suggestions.mockResolvedValue([{ name: 'Gym', expectedMinutes: 60, tags: ['STRENGTH'], timesUsed: 4 }]);
     const u = tapCounter();
-    render(<TasksScreen meta={meta} act={act} version={0} refresh={() => {}} onError={() => {}} onFocus={() => {}} />);
+    render(tasksScreen());
     await u.tap(await screen.findByRole('button', { name: /Gym/ }));
     expect(u.taps).toBe(1);
     expect(mocked.createTask).toHaveBeenCalledExactlyOnceWith('Gym');
@@ -114,46 +120,78 @@ describe('friction: tap counts', () => {
   it('validating a timer needs 1 tap', async () => {
     const onAnswer = vi.fn();
     const u = tapCounter();
-    render(<TimerQuestion timer={askingTimer} onAnswer={onAnswer} />);
-    await u.tap(screen.getByRole('button', { name: 'Yes' }));
+    render(<TimerQuestion timer={askingTimer} previewXp={27.5} onAnswer={onAnswer} />);
+    await u.tap(screen.getByRole('button', { name: /Yes/ }));
     expect(u.taps).toBe(1);
     expect(onAnswer).toHaveBeenCalledExactlyOnceWith(true);
   });
 
   it('starting a timer needs 1 tap', async () => {
     const u = tapCounter();
-    render(<TimerScreen meta={meta} timer={null} taskId={null} clearTask={() => {}} onTimer={() => {}} onError={() => {}} />);
-    await u.tap(screen.getByRole('button', { name: '45m' }));
+    render(<TimerScreen meta={meta} multiplier={1.1} timer={null} taskId={null} clearTask={() => {}} onTimer={() => {}} onError={() => {}} />);
+    await u.tap(screen.getByLabelText('45 minutes'));
     expect(u.taps).toBe(1);
     expect(mocked.startTimer).toHaveBeenCalledExactlyOnceWith(45, undefined, undefined, undefined);
   });
 
   it('a habit is ticked with 1 tap', async () => {
     mocked.habits.mockResolvedValue([
-      { id: 5, name: 'Stretch', days: ['MONDAY'], tags: [], scheduledToday: true, doneToday: false },
+      { id: 5, name: 'Stretch', days: ['MONDAY'], tags: [], scheduledToday: true, doneToday: false, streak: 2, history: [] },
     ]);
     const u = tapCounter();
-    render(<HabitsScreen meta={meta} act={act} version={0} refresh={() => {}} onError={() => {}} />);
+    render(<HabitsScreen meta={meta} state={state} act={act} version={0} refresh={() => {}} onError={() => {}} />);
     await u.tap(await screen.findByLabelText('yes: Stretch'));
     expect(u.taps).toBe(1);
     expect(mocked.habitDone).toHaveBeenCalledExactlyOnceWith(5);
   });
 
   it('the mood check-in is 1 tap', async () => {
+    const onPick = vi.fn();
     const u = tapCounter();
-    render(<CheckinRow act={act} version={0} />);
-    await u.tap(await screen.findByLabelText('mood 4'));
+    render(<MoodPicker onPick={onPick} />);
+    await u.tap(screen.getByLabelText(/mood 4/));
     expect(u.taps).toBe(1);
-    expect(mocked.checkin).toHaveBeenCalledExactlyOnceWith(4);
+    expect(onPick).toHaveBeenCalledExactlyOnceWith(4);
+  });
+});
+
+describe('stat tags on task creation (v2 4.1)', () => {
+  it('picking several stats sends them, and shows the equal split before adding', async () => {
+    const u = tapCounter();
+    render(<QuickAdd meta={meta} multiplier={1} onAdded={() => {}} onError={() => {}} />);
+    await u.type(screen.getByLabelText('task name'), 'Essay');
+    await u.tap(screen.getByLabelText('Intellect'));
+    await u.tap(screen.getByLabelText('Discipline'));
+    // preselected 15 min = 15 base XP over 2 stats
+    expect(screen.getByLabelText('stat split').textContent?.replace(/\s/g, '')).toBe('+7.5+7.5');
+    await u.tap(screen.getByLabelText('15 minutes'));
+    expect(mocked.createTask).toHaveBeenCalledExactlyOnceWith('Essay', 15, ['INTELLECT', 'DISCIPLINE']);
+  });
+
+  it('zero tags is allowed and says it earns coins only', async () => {
+    const u = tapCounter();
+    render(<QuickAdd meta={meta} multiplier={1} onAdded={() => {}} onError={() => {}} />);
+    await u.type(screen.getByLabelText('task name'), 'Admin');
+    await u.tap(screen.getByLabelText('Intellect'));
+    await u.tap(screen.getByLabelText('Intellect')); // off again
+    expect(screen.getByLabelText('stat split').textContent).toContain('coins only');
+    await u.tap(screen.getByLabelText('5 minutes'));
+    expect(mocked.createTask).toHaveBeenCalledExactlyOnceWith('Admin', 5, []);
+  });
+
+  it('duration chips show the XP they will pay', () => {
+    render(<QuickAdd meta={meta} multiplier={1.1} onAdded={() => {}} onError={() => {}} />);
+    expect(screen.getByLabelText('30 minutes').textContent).toBe('30m+33');
+    expect(screen.getByLabelText('120 minutes').textContent).toBe('2h+132');
   });
 });
 
 describe('no payout without the act', () => {
-  it('typing a name and choosing tags never ticks anything', async () => {
+  it('typing a name and choosing tags never ticks or creates anything', async () => {
     const u = tapCounter();
-    render(<QuickAdd meta={meta} onAdded={() => {}} onError={() => {}} />);
+    render(<QuickAdd meta={meta} multiplier={1} onAdded={() => {}} onError={() => {}} />);
     await u.type(screen.getByLabelText('task name'), 'Essay');
-    await u.tap(screen.getByRole('button', { name: 'INT' }));
+    await u.tap(screen.getByLabelText('Intellect'));
     expect(mocked.tickTask).not.toHaveBeenCalled();
     expect(mocked.createTask).not.toHaveBeenCalled();
   });

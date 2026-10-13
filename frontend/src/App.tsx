@@ -1,40 +1,64 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, whole, type ActionResult, type GameState, type LedgerEvent, type Meta, type TimerView } from './api';
-import { NavBar } from './components/NavBar';
-import { short } from './components/TagChips';
-import { TimerQuestion } from './components/TimerQuestion';
-import { XpPops, type Pop } from './components/XpPops';
+import { AlertTriangle, Coins, LayoutDashboard, ListTodo, Repeat, Settings as SettingsIcon, Swords, Timer, User, WifiOff, Zap } from 'lucide-react';
+import { api, type ActionResult, type Character, type GameState, type LedgerEvent, type Meta, type StageView, type TimerView } from './api';
+import { CampaignScreen } from './screens/CampaignScreen';
 import { HabitsScreen } from './screens/HabitsScreen';
+import { HeroScreen } from './screens/HeroScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { TasksScreen } from './screens/TasksScreen';
 import { TimerScreen } from './screens/TimerScreen';
-import { blip, loadSettings, saveSettings, type Settings } from './settings';
+import { chime, loadSettings, saveSettings, type Settings } from './settings';
 import type { Act, Screen } from './types';
+import { BossDefeated } from './ui/BossDefeated';
+import { CountUp } from './ui/CountUp';
+import { TimerQuestion } from './ui/TimerQuestion';
+import { XpPops, type Pop } from './ui/XpPops';
+
+const NAV: { id: Screen; label: string; Icon: typeof Timer }[] = [
+  { id: 'home', label: 'Home', Icon: LayoutDashboard },
+  { id: 'tasks', label: 'Quests', Icon: ListTodo },
+  { id: 'timer', label: 'Focus', Icon: Timer },
+  { id: 'habits', label: 'Habits', Icon: Repeat },
+  { id: 'campaign', label: 'Boss', Icon: Swords },
+  { id: 'hero', label: 'Hero', Icon: User },
+];
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
   const [state, setState] = useState<GameState | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
+  const [character, setCharacter] = useState<Character | null>(null);
   const [timer, setTimer] = useState<TimerView | null>(null);
   const [focusTaskId, setFocusTaskId] = useState<number | null>(null);
   const [pops, setPops] = useState<Pop[]>([]);
   const [toast, setToast] = useState<string | null>(null);
-  const [attackKey, setAttackKey] = useState(0);
-  const [version, setVersion] = useState(0); // bumped after each change so lists reload
+  const [hitKey, setHitKey] = useState(0);
+  const [version, setVersion] = useState(0); // bumped after each change so screens reload
   const [settings, setSettings] = useState<Settings>(loadSettings);
   const [offline, setOffline] = useState(false);
+  const [victory, setVictory] = useState<StageView | null>(null);
+  const lastStage = useRef<StageView | null>(null);
   const toastTimer = useRef<number>(undefined);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), 2500);
+    toastTimer.current = window.setTimeout(() => setToast(null), 2600);
   }, []);
 
   const refresh = useCallback(async () => {
     try {
-      setState(await api.state());
+      const [s, c] = await Promise.all([api.state(), api.character()]);
+      // Boss just died in this session: celebrate (brief 11). Not on first load.
+      const before = lastStage.current;
+      if (before && !before.cleared && s.stage.cleared && before.weekStart === s.stage.weekStart) {
+        setVictory(s.stage);
+        window.setTimeout(() => setVictory(null), 1500);
+      }
+      lastStage.current = s.stage;
+      setState(s);
+      setCharacter(c);
       setOffline(false);
     } catch {
       setOffline(true);
@@ -42,7 +66,7 @@ export default function App() {
     setVersion((v) => v + 1);
   }, []);
 
-  /** Asks the server for the timer waiting for an answer: on start, and every time the app is reopened. */
+  /** Asks the server for the timer waiting for an answer: on start, and whenever the app is reopened. */
   const loadTimer = useCallback(() => {
     api.currentTimer().then((t) => setTimer(t ?? null)).catch(() => {});
   }, []);
@@ -61,15 +85,26 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [refresh, loadTimer]);
 
-  /** Visual feedback for a payment: number pop, hero attack, sound. All under 1.5 s. */
+  // When a running block should be over, ask the server (it decides, not this device's clock).
+  useEffect(() => {
+    if (!timer || timer.status !== 'RUNNING') return;
+    const msLeft = new Date(timer.endsAt).getTime() - new Date(timer.serverNow).getTime();
+    const id = window.setTimeout(() => {
+      if (settings.sound) chime('alarm');
+      loadTimer();
+    }, Math.max(0, msLeft) + 500);
+    return () => window.clearTimeout(id);
+  }, [timer, settings.sound, loadTimer]);
+
+  /** Feedback for a payment: floating XP with its stat split, hero lunge, chime. Under 1.5 s. */
   const celebrate = useCallback(
     (e: LedgerEvent) => {
       const id = Date.now() + Math.random();
-      const stats = Object.keys(e.statSplits).map(short).join(' ');
-      setPops((p) => [...p, { id, text: `+${whole(e.xp)} XP`, sub: stats }]);
-      window.setTimeout(() => setPops((p) => p.filter((x) => x.id !== id)), 1300);
-      setAttackKey((k) => k + 1);
-      if (settings.sound) blip('gain');
+      const splits = Object.entries(e.statSplits).map(([sid, v]) => ({ id: sid, xp: Number(v) }));
+      setPops((p) => [...p, { id, xp: e.xp, splits }]);
+      window.setTimeout(() => setPops((p) => p.filter((x) => x.id !== id)), 1350);
+      setHitKey((k) => k + 1);
+      if (settings.sound) chime('gain');
     },
     [settings.sound],
   );
@@ -98,78 +133,98 @@ export default function App() {
     loadTimer();
   };
 
-  // When a running block should be over, ask the server (it decides, not this device's clock).
-  useEffect(() => {
-    if (!timer || timer.status !== 'RUNNING') return;
-    const msLeft = new Date(timer.endsAt).getTime() - new Date(timer.serverNow).getTime();
-    const id = window.setTimeout(() => {
-      if (settings.sound) blip('alarm');
-      loadTimer();
-    }, Math.max(0, msLeft) + 500);
-    return () => window.clearTimeout(id);
-  }, [timer, settings.sound, loadTimer]);
-
   const changeSettings = (s: Settings) => {
     setSettings(s);
     saveSettings(s);
   };
 
-  const classes = ['app', settings.scanlines && !settings.reducedEffects ? 'scanlines' : '', settings.reducedEffects ? 'reduced' : '']
-    .filter(Boolean)
-    .join(' ');
+  const m = state?.multipliers;
+  const mult = m ? m.streak * m.weapon * m.ascension * m.comeback : 1;
 
   return (
-    <div className={classes}>
-      {offline && <div className="banner">Cannot reach the GameLife server. Is the backend running?</div>}
-      {state && !state.chain.valid && (
-        <div className="banner">⚠ Ledger check: {state.chain.message}. You can keep playing; tell future-you to look at it.</div>
-      )}
+    <div className={'shell' + (settings.reducedEffects ? ' reduced' : '')}>
+      <nav className="nav" aria-label="main">
+        {NAV.map((n) => (
+          <button key={n.id} className={'nav-item' + (screen === n.id ? ' active' : '')} onClick={() => setScreen(n.id)} aria-current={screen === n.id}>
+            <n.Icon size={22} strokeWidth={2} />
+            {n.label}
+          </button>
+        ))}
+      </nav>
 
-      {!state || !meta ? (
-        <p className="cursor dim">booting</p>
-      ) : (
-        <>
-          {screen === 'home' && (
-            <HomeScreen state={state} meta={meta} act={act} attackKey={attackKey} version={version} refresh={refresh} onError={showToast} />
+      <main className="main">
+        <header className="topbar">
+          <div className="brand grow">
+            <span className="brand-mark">
+              <Zap size={16} color="#fff" />
+            </span>
+            GameLife
+          </div>
+          {state && (
+            <span className="pill gold" aria-label="coins">
+              <Coins size={14} /> <CountUp value={state.balance} className="num" />
+            </span>
           )}
-          {screen === 'tasks' && (
-            <TasksScreen
-              meta={meta}
-              act={act}
-              version={version}
-              refresh={refresh}
-              onError={showToast}
-              onFocus={(id) => {
-                setFocusTaskId(id);
-                setScreen('timer');
-              }}
-            />
+          {character && (
+            <button className="level-badge" style={{ border: 'none', cursor: 'pointer' }} onClick={() => setScreen('hero')}>
+              Lv {character.overallLevel}
+            </button>
           )}
-          {screen === 'timer' && (
-            <TimerScreen
-              meta={meta}
-              timer={timer}
-              taskId={focusTaskId}
-              clearTask={() => setFocusTaskId(null)}
-              onTimer={setTimer}
-              onError={showToast}
-            />
-          )}
-          {screen === 'habits' && <HabitsScreen meta={meta} act={act} version={version} refresh={refresh} onError={showToast} />}
-          {screen === 'settings' && <SettingsScreen settings={settings} onSettings={changeSettings} refresh={refresh} onMessage={showToast} />}
-        </>
-      )}
+          <button className="icon-btn" aria-label="settings" onClick={() => setScreen('settings')}>
+            <SettingsIcon size={19} />
+          </button>
+        </header>
 
-      {timer && timer.status === 'RUNNING' && screen !== 'timer' && (
-        <button className="btn" style={{ width: '100%' }} onClick={() => setScreen('timer')}>
-          ◷ focus block running: {timer.label}
-        </button>
-      )}
-      {timer && timer.status === 'ASK' && <TimerQuestion timer={timer} onAnswer={answerTimer} />}
+        {offline && (
+          <div className="banner">
+            <WifiOff size={16} /> Cannot reach the GameLife server. Is the backend running?
+          </div>
+        )}
+        {state && !state.chain.valid && (
+          <div className="banner">
+            <AlertTriangle size={16} /> Ledger check: {state.chain.message}. You can keep playing.
+          </div>
+        )}
 
-      <XpPops pops={pops} />
+        {!state || !meta ? (
+          <p className="muted">Loading…</p>
+        ) : (
+          <div key={screen}>
+            {screen === 'home' && (
+              <HomeScreen state={state} meta={meta} character={character} act={act} hitKey={hitKey} version={version}
+                refresh={refresh} onError={showToast} go={setScreen} />
+            )}
+            {screen === 'tasks' && (
+              <TasksScreen meta={meta} multiplier={mult} act={act} version={version} refresh={refresh} onError={showToast}
+                onFocus={(id) => {
+                  setFocusTaskId(id);
+                  setScreen('timer');
+                }} />
+            )}
+            {screen === 'timer' && (
+              <TimerScreen meta={meta} multiplier={mult} timer={timer} taskId={focusTaskId}
+                clearTask={() => setFocusTaskId(null)} onTimer={setTimer} onError={showToast} />
+            )}
+            {screen === 'habits' && <HabitsScreen meta={meta} state={state} act={act} version={version} refresh={refresh} onError={showToast} />}
+            {screen === 'campaign' && <CampaignScreen state={state} meta={meta} act={act} version={version} />}
+            {screen === 'hero' && character && <HeroScreen character={character} state={state} />}
+            {screen === 'settings' && <SettingsScreen settings={settings} onSettings={changeSettings} refresh={refresh} onMessage={showToast} />}
+          </div>
+        )}
+
+        {timer && timer.status === 'RUNNING' && screen !== 'timer' && (
+          <button className="btn block" style={{ marginTop: 14 }} onClick={() => setScreen('timer')}>
+            <Timer size={16} /> Focus block running: {timer.label}
+          </button>
+        )}
+      </main>
+
+      {timer && timer.status === 'ASK' && (
+        <TimerQuestion timer={timer} previewXp={timer.countedMinutes * (meta?.timer.xpPerMinute ?? 1) * mult} onAnswer={answerTimer} />
+      )}
+      {!victory && <XpPops pops={pops} />}
+      {victory && <BossDefeated stage={victory} />}
       {toast && <div className="toast">{toast}</div>}
-      <NavBar screen={screen} onChange={setScreen} />
     </div>
   );
 }

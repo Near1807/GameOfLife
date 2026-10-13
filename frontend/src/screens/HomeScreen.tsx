@@ -1,77 +1,250 @@
 import { useEffect, useState } from 'react';
-import { api, whole, type GameState, type Meta } from '../api';
-import { CheckinRow } from '../components/CheckinRow';
-import { ConsoleLog } from '../components/ConsoleLog';
-import { Hero } from '../components/Hero';
-import { QuickAdd } from '../components/QuickAdd';
-import { StreakFlame } from '../components/StreakFlame';
-import type { Act } from '../types';
+import {
+  Activity, CalendarCheck, Check, ChevronRight, Coins, Flame, Moon, Play, Smile, Snowflake, Sparkles, Sword, Timer, Undo2, Zap,
+} from 'lucide-react';
+import { api, type Character, type GameState, type HabitView, type LedgerEvent, type Meta, type TaskView } from '../api';
+import { nextAction } from '../nextAction';
+import { statStyle } from '../stats';
+import type { Act, Screen } from '../types';
+import { Bar } from '../ui/Bar';
+import { BossCard } from '../ui/BossCard';
+import { Card } from '../ui/Card';
+import { CountUp } from '../ui/CountUp';
+import { HeroPortrait } from '../ui/HeroPortrait';
+import { MoodPicker } from '../ui/MoodPicker';
+import { QuickAdd } from '../ui/QuickAdd';
+import { StatTagPicker } from '../ui/StatTagPicker';
 
-/** Home: the hero, the streak flame, the balance, the check-in, a quick-add and the log. */
+/** Home dashboard (v2 section 4.3). */
 export function HomeScreen(props: {
   state: GameState;
   meta: Meta;
+  character: Character | null;
   act: Act;
-  attackKey: number;
+  hitKey: number;
   version: number;
   refresh: () => void;
   onError: (m: string) => void;
+  go: (s: Screen) => void;
 }) {
-  const { state } = props;
+  const { state, meta } = props;
   const s = state.streak;
+  const m = state.multipliers;
+  const mult = m.streak * m.weapon * m.ascension * m.comeback;
+
+  const [mood, setMood] = useState<number | null>(null);
+  const [habits, setHabits] = useState<HabitView[]>([]);
+  const [tasks, setTasks] = useState<TaskView[]>([]);
   const [rest, setRest] = useState<string[]>([]);
+  const [checkinTags, setCheckinTags] = useState<string[]>(meta.lastCheckinTags);
+  const [editTags, setEditTags] = useState(false);
 
   useEffect(() => {
+    api.checkinToday().then((r) => setMood(r.mood)).catch(() => {});
+    api.habits().then(setHabits).catch(() => {});
+    api.tasks().then(setTasks).catch(() => {});
     api.restDays().then(setRest).catch(() => {});
   }, [props.version]);
 
   const tomorrow = addDays(state.today, 1);
+  const next = nextAction({ checkedIn: mood !== null, habits, tasks, character: props.character });
+  const c = props.character;
 
   return (
-    <>
-      <div className="panel">
-        <div className="home-top">
-          <Hero attackKey={props.attackKey} />
-          <div className="grow">
-            <div className="row">
-              <img src="/ui/icon_coin.png" className="pixel" width={32} height={32} alt="" />
-              <span className="stat-big" aria-label="balance">
-                {whole(state.balance)}
-              </span>
+    <div className="page grid home">
+      {/* hero */}
+      <Card glow>
+        <div className="row" style={{ alignItems: 'flex-start', gap: 16 }}>
+          <button onClick={() => props.go('hero')} style={{ all: 'unset', cursor: 'pointer' }} aria-label="open character sheet">
+            <HeroPortrait scale={3} hitKey={props.hitKey} />
+          </button>
+          <div className="col grow">
+            <span className="level-badge" style={{ alignSelf: 'flex-start' }}>
+              Level {c?.overallLevel ?? 1}
+            </span>
+            <div className="class-name">{c?.className ?? '…'}</div>
+            <div className="muted small">{c?.rank}</div>
+          </div>
+          <button className="icon-btn" onClick={() => props.go('hero')} aria-label="character sheet">
+            <ChevronRight size={18} />
+          </button>
+        </div>
+        {c && (
+          <div style={{ marginTop: 16, display: 'grid', gap: 9 }}>
+            {c.stats.map((st) => {
+              const style = statStyle(st.id);
+              return (
+                <div key={st.id} className="row" style={{ gap: 8 }}>
+                  <style.Icon size={15} style={{ color: style.color, flexShrink: 0 }} />
+                  <span className="tiny muted" style={{ width: 30 }}>
+                    {style.short}
+                  </span>
+                  <div className="grow">
+                    <Bar value={st.progress} color={style.color} label={`${st.name} progress`} />
+                  </div>
+                  <span className="num tiny" style={{ width: 34, textAlign: 'right', color: style.color }}>
+                    Lv{st.level}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      <div className="grid">
+        {/* this week's boss (brief 9.1) */}
+        <BossCard stage={state.stage} onOpen={() => props.go('campaign')} />
+
+        {/* today and wallet */}
+        <Card>
+          <div className="grid two" style={{ gap: 18 }}>
+            <div>
+              <div className="label row" style={{ gap: 6 }}>
+                <Zap size={13} /> Today
+              </div>
+              <div className="row" style={{ alignItems: 'baseline', gap: 6, margin: '6px 0 10px' }}>
+                <CountUp value={state.xpToday} className="big-num gold" />
+                <span className="faint small">/ {meta.dailyXpGoal} XP</span>
+              </div>
+              <Bar value={state.xpToday / meta.dailyXpGoal} color="var(--gold)" thick label="today's XP" />
             </div>
-            <div className="dim small">today +{whole(state.xpToday)} XP</div>
-            <div className="row" style={{ marginTop: 8 }}>
-              <StreakFlame days={s.days} />
-              <div>
-                <div>
-                  <b className="gold">{s.days}</b> day{s.days === 1 ? '' : 's'}
-                  <span className="cyan"> x{s.multiplierToday.toFixed(2)}</span>
-                </div>
-                <div className="dim small">
-                  {s.freezes > 0 && `❄ ${s.freezes} freeze${s.freezes > 1 ? 's' : ''} · `}
-                  {s.nextMilestone > 0 && `next: ${s.nextMilestone}d`}
-                </div>
+            <div>
+              <div className="label row" style={{ gap: 6 }}>
+                <Coins size={13} /> Coins
+              </div>
+              <div className="row" style={{ alignItems: 'baseline', gap: 6, margin: '6px 0 10px' }}>
+                <CountUp value={state.balance} className="big-num gold" />
+              </div>
+              <Bar value={state.balance / state.nextUpgradeCost} color="var(--violet-soft)" thick label="toward next weapon upgrade" />
+              <div className="tiny faint" style={{ marginTop: 6 }}>
+                <Sword size={11} /> Weapon Lv {state.weaponLevel + 1} at {Math.round(state.nextUpgradeCost)}
               </div>
             </div>
           </div>
-        </div>
-        {s.comebackPending && <p className="gold small">Welcome back! Your next action pays double.</p>}
-        <div className="row wrap" style={{ marginTop: 8 }}>
-          {rest.includes(tomorrow) ? (
-            <span className="dim small">💤 tomorrow is a rest day</span>
-          ) : (
-            <button className="chip" onClick={() => props.act(api.planRest(tomorrow))}>
-              💤 rest tomorrow
-            </button>
+        </Card>
+
+        {/* streak */}
+        <Card>
+          <div className="row" style={{ gap: 14 }}>
+            <Flame size={40} className={s.days > 0 ? 'flame live' : 'flame off'} />
+            <div className="grow">
+              <div className="row" style={{ alignItems: 'baseline', gap: 8 }}>
+                <span className="big-num">{s.days}</span>
+                <span className="muted">day streak</span>
+              </div>
+              <div className="row wrap" style={{ gap: 6, marginTop: 6 }}>
+                <span className="pill gold">x{s.multiplierToday.toFixed(2)} XP</span>
+                {s.freezes > 0 && (
+                  <span className="pill cyan">
+                    <Snowflake size={12} /> {s.freezes}
+                  </span>
+                )}
+                {s.comebackPending && <span className="pill gold">Comeback x2 ready</span>}
+              </div>
+            </div>
+            {rest.includes(tomorrow) ? (
+              <span className="pill violet">
+                <Moon size={12} /> Rest tomorrow
+              </span>
+            ) : (
+              <button className="btn" onClick={() => props.act(api.planRest(tomorrow))} title="Plan a rest day tomorrow: keeps the streak">
+                <Moon size={16} /> Rest
+              </button>
+            )}
+          </div>
+          {s.nextMilestone > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <Bar value={s.days / s.nextMilestone} color="#fb923c" label="streak milestone" />
+              <div className="tiny faint" style={{ marginTop: 5 }}>
+                Next milestone: {s.nextMilestone} days
+              </div>
+            </div>
           )}
-          {rest.includes(state.today) && <span className="cyan small">resting today: streak is safe</span>}
-        </div>
+          {rest.includes(state.today) && <p className="small cyan" style={{ marginBottom: 0 }}>Rest day today: your streak is safe.</p>}
+        </Card>
+
+        {/* next best action */}
+        <Card title="Next best action" icon={Sparkles} iconColor="var(--gold)">
+          <div className="row">
+            <div className="grow">
+              <div style={{ fontWeight: 650, fontSize: 17 }}>{next.title}</div>
+              <div className="small muted">{next.why}</div>
+            </div>
+            {next.kind === 'habit' && (
+              <button className="btn primary" onClick={() => props.act(api.habitDone(next.id))} aria-label={`do now: ${next.title}`}>
+                <Check size={18} /> Done
+              </button>
+            )}
+            {next.kind === 'task' && (
+              <button className="btn primary" onClick={() => props.act(api.tickTask(next.id))} aria-label={`do now: ${next.title}`}>
+                <Check size={18} /> Done
+              </button>
+            )}
+            {next.kind === 'focus' && (
+              <button className="btn primary" onClick={() => props.go('timer')}>
+                <Play size={18} /> Focus
+              </button>
+            )}
+          </div>
+        </Card>
       </div>
 
-      <CheckinRow act={props.act} version={props.version} />
-      <QuickAdd meta={props.meta} onAdded={props.refresh} onError={props.onError} />
-      <ConsoleLog events={state.log} />
-    </>
+      {/* mood */}
+      <Card title={mood === null ? 'How are you today?' : 'Mood logged'} icon={Smile} iconColor="var(--cyan)"
+        action={mood === null && (
+          <button className="btn ghost" onClick={() => setEditTags(!editTags)}>
+            Feeds: {checkinTags.map((t) => statStyle(t).short).join(' ') || 'coins only'}
+          </button>
+        )}>
+        <MoodPicker picked={mood} onPick={(v) => props.act(api.checkin(v, checkinTags))} />
+        {editTags && mood === null && (
+          <div style={{ marginTop: 14 }}>
+            <StatTagPicker stats={meta.stats} selected={checkinTags} onChange={setCheckinTags} baseXp={meta.checkin.xp} />
+          </div>
+        )}
+        {mood === null && (
+          <div className="tiny faint" style={{ marginTop: 8 }}>
+            +{Math.round(meta.checkin.xp * mult)} XP, once a day
+          </div>
+        )}
+      </Card>
+
+      <QuickAdd meta={meta} multiplier={mult} onAdded={props.refresh} onError={props.onError} />
+
+      <Card title="Recent activity" icon={Activity} className="span-2">
+        {state.log.length === 0 && <p className="muted small">Nothing yet. Your first action shows up here.</p>}
+        {state.log.slice(0, 8).map((e) => (
+          <FeedItem key={e.id} e={e} />
+        ))}
+      </Card>
+    </div>
+  );
+}
+
+const MODULE_ICON = { todo: Check, timer: Timer, habit: CalendarCheck, checkin: Smile, rest: Moon } as const;
+
+function FeedItem(props: { e: LedgerEvent }) {
+  const e = props.e;
+  const Icon = e.type === 'TASK_UNDONE' ? Undo2 : MODULE_ICON[e.module as keyof typeof MODULE_ICON] ?? Zap;
+  const tags = Object.keys(e.statSplits);
+  return (
+    <div className="feed-item">
+      <span className="feed-icon" style={{ color: tags[0] ? statStyle(tags[0]).color : 'var(--text-2)' }}>
+        <Icon size={16} />
+      </span>
+      <div className="grow">
+        <div style={{ fontWeight: 550 }}>{e.type === 'REST_DAY' ? 'Rest day planned' : e.label}</div>
+        <div className="meta-row tiny faint">
+          {new Date(e.occurredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {tags.map((t) => {
+            const st = statStyle(t);
+            return <st.Icon key={t} size={12} style={{ color: st.color }} />;
+          })}
+        </div>
+      </div>
+      {e.xp !== 0 && <span className="reward">{e.xp > 0 ? '+' : ''}{Math.round(e.xp)}</span>}
+    </div>
   );
 }
 

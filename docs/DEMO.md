@@ -1,4 +1,36 @@
-# Demo: milestones 1 and 2
+# Demo
+
+## Version 2, step 3 (weekly boss, review, stats)
+
+1. **Home:** the Bug Queen (stage 1, 800 HP) sits under your hero. Tick any quest: the boss
+   flashes and its HP bar drains by the XP you earned.
+2. **Boss defeat:** follow "See a boss defeat" in the README (a single 800-minute quest).
+   A full-screen "Boss defeated" plays for 1.4 s, you get +100 coins, and the boss card gets a
+   "Defeated" stamp.
+3. **Boss tab:** the campaign map with ten bosses: cleared (gold check), current (red glow),
+   locked (silhouette).
+4. **Boss → Weekly review:** XP per day, stat XP, quests, focus time, habits, mood, skipped habits.
+   Use the arrows to go back a week.
+5. **Boss → Stats:** 7, 30 or 90 days of XP and streak history, and stat XP per stat. Hover or
+   tap a bar to read its value.
+
+## Version 2, steps 1 and 2 (new look, stat tags, character sheet)
+
+1. **Quests:** type a name, tap two stat icons (e.g. INT and DIS): the equal split of the base XP
+   appears under them, and each duration chip shows the XP it will pay. Tap a chip to add.
+2. Tick the quest: a gold "+XP" floats up with the stat amounts, the hero lunges, coins count up.
+3. **Hero:** the stat you fed has a longer bar and the radar shape grew; at 100 stat XP it reaches
+   level 2 and the overall level goes up. The class name follows your two highest stats.
+4. **Home:** the same stat bars on the hero card, today's XP and coins with bars, the streak,
+   and "Next best action" with a one-tap Done.
+5. **Home → mood:** "Feeds: SPI" opens the stat picker for the check-in; the mood is still one tap.
+6. **Habits:** each habit has a streak flame and a 28-day strip.
+7. **Settings → Reduced effects:** every animation stops.
+
+## Milestones 1 and 2 (daily tools and integrity)
+
+Labels changed in v2: the mood faces are icons, "tasks" is "Quests", the rest button says "Rest",
+export is "Settings → Export backup".
 
 About 10 minutes. Start with `npm run build` then `npm start`, open <http://localhost:8080> on
 the laptop and `http://<laptop-ip>:8080` on the phone. To start from zero, stop the backend and

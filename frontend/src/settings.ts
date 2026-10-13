@@ -4,15 +4,15 @@
 export interface Settings {
   reducedEffects: boolean;
   sound: boolean;
-  scanlines: boolean;
 }
 
 const KEY = 'gamelife.settings';
-const DEFAULTS: Settings = { reducedEffects: false, sound: true, scanlines: true };
+const DEFAULTS: Settings = { reducedEffects: false, sound: true };
 
 export function loadSettings(): Settings {
   try {
-    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') };
+    const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}');
+    return { reducedEffects: !!(saved.reducedEffects ?? DEFAULTS.reducedEffects), sound: !!(saved.sound ?? DEFAULTS.sound) };
   } catch {
     return DEFAULTS;
   }
@@ -26,23 +26,25 @@ export function saveSettings(s: Settings) {
   }
 }
 
-/** A short 8-bit style blip made with the Web Audio API (no sound files needed yet). */
-export function blip(kind: 'gain' | 'alarm') {
+/** A short soft chime made with the Web Audio API (no sound files needed yet). */
+export function chime(kind: 'gain' | 'alarm') {
   try {
     const ctx = new AudioContext();
-    const notes = kind === 'gain' ? [660, 880, 1320] : [880, 660, 880, 660];
+    const notes = kind === 'gain' ? [784, 1046.5, 1318.5] : [880, 1174.7, 880, 1174.7];
     notes.forEach((freq, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = 'square';
+      osc.type = 'sine';
       osc.frequency.value = freq;
-      gain.gain.value = 0.05;
+      const t = ctx.currentTime + i * 0.09;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.08, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
       osc.connect(gain).connect(ctx.destination);
-      const t = ctx.currentTime + i * 0.08;
       osc.start(t);
-      osc.stop(t + 0.07);
+      osc.stop(t + 0.4);
     });
-    setTimeout(() => ctx.close(), 1000);
+    setTimeout(() => ctx.close(), 1500);
   } catch {
     // no audio available
   }

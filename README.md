@@ -3,9 +3,11 @@
 A single-user toolbox where real daily actions (tasks, focus blocks, habits, a mood check-in)
 feed one append-only XP ledger, styled as a pixel-art game in a black terminal look.
 
-**Status: milestones 1 and 2 of 5** (foundation and daily tools). The character sheet, the weekly
-boss, the shop and the final art come in the next milestones. See `DECISIONS.md` for every
-assumption made, and `docs/DEMO.md` for what to try.
+**Status: version 2, steps 1 to 3 of 5.** Modern sci-fi design, stat tags on every action,
+character sheet, weekly boss with campaign map and ascension, weekly review, stats dashboard,
+and the new pixel-art hero and ten bosses. Next: shop, weapon upgrades, themes and achievements
+(step 4), then more juice (step 5). See `DECISIONS.md` for every assumption, `docs/DEMO.md` for
+what to try and `docs/screenshots/v2/` for how it looks.
 
 ## Requirements
 
@@ -55,11 +57,28 @@ Open <http://localhost:5173> (or `http://<laptop-ip>:5173` on the phone).
 ## Test
 
 ```bash
-npm test               # backend (JUnit, 54 tests) then frontend (Vitest, 9 tests)
+npm test               # backend (JUnit, 74 tests) then frontend (Vitest, 18 tests)
 ```
 
 Or separately: `npm run test:backend`, `npm run test:frontend`. The backend tests use their own
 database in `backend/target/test-data/` and never touch your real data.
+
+## See a boss defeat
+
+The boss of week 1 has 800 HP, and every XP you validate this week is damage. To see a kill
+without waiting a week, give it one big hit, preferably on a test database:
+
+1. Stop the backend and start it on a throwaway database:
+   `mvn -f backend/pom.xml spring-boot:run -Dspring-boot.run.arguments=--gamelife.db-path=../data/test.db`
+2. Open <http://localhost:8080>, go to **Quests**, type `Boss test`, type `800` in the **min**
+   box and press Enter.
+3. Tap the circle next to **Boss test**: it pays at least 880 XP (800 x the streak bonus). The
+   "Boss defeated" celebration plays and you get +100 coins.
+4. **Home** and **Boss** now show the Bug Queen with a "Defeated" stamp. On the campaign map,
+   stage 1 has a gold check. Stage 2 (Doomscroll Wraith, 1,040 HP) starts next Monday at 04:00.
+
+On your real data you can do the same and then tap the circle again to un-tick: the XP and coins
+from the task go back, but the kill and its 100 coins stay (see DECISIONS.md).
 
 ## Backup and restore
 
@@ -83,21 +102,30 @@ backend/    Spring Boot (Java 21), SQLite through JdbcTemplate, no ORM
   src/main/java/gamelife/
     ledger/   append-only ledger, unique keys, hash chain       (brief 5)
     payout/   the ONLY place that pays XP, applies multipliers  (brief 6)
-    rules/    pure rules: streak, freezes, comeback, stat split (brief 7, 8)
+    rules/    pure rules: streak, freezes, comeback, stat split, levels (brief 7, 8)
+    character/ character sheet: levels, class, rank             (brief 8)
+    stage/    weekly boss, kill check, ascension                (brief 9.1)
+    review/   weekly review and stats dashboard
     tasks/ timer/ habits/ checkin/ rest/   the daily tools      (brief 6, 7)
     backup/   export / import                                   (brief 3.3)
     state/    read-only summaries for the home screen
   src/main/resources/schema.sql   all tables
 frontend/   React + TypeScript + Vite
   src/api.ts        every call to the backend
-  src/screens/      home, tasks, focus, habits, settings
-  src/components/   hero, flame, chips, XP pops, console log, timer question
-  src/theme.css     the free "Terminal" theme as design tokens
-  src/test/         friction (tap counting) tests
+  src/screens/      home, quests, focus, habits, campaign (boss, review, stats), hero, settings
+  src/ui/           design-system components: card, stat tag picker, bars, count-up,
+                    ring, radar chart, hero portrait, mood picker, XP pops, timer question,
+                    sprite, boss card, boss-defeated celebration, campaign map, charts
+  src/stats.ts      icon and colour of each stat, split preview
+  src/nextAction.ts the "next best action" rule of the home screen
+  src/theme.css     the free "Nebula" theme as design tokens
+  src/test/         friction (tap counting), tag picker and logic tests
 config/gamelife.json       every number and formula parameter
 content/palette.json       the 32-color palette (brief 12)
-content/sprites/           placeholder pixel art (served at the site root)
-content/tools/             make-placeholder-sprites.mjs (npm run sprites)
+content/character.json     class names (two highest stats) and rank names
+content/bosses.json        the ten weekly bosses (name, flavour, sprite)
+content/sprites/           pixel art: hero/, enemies/ (served at the site root)
+content/tools/             make-sprites.mjs draws the hero and bosses (npm run sprites)
 scripts/backup.mjs         command-line backup
 ```
 

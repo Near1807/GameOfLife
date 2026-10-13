@@ -35,6 +35,17 @@
     "defaultTags": ["DISCIPLINE"]
   },
 
+  "home": {
+    "_comment": "Daily XP goal drawn as the 'today' bar on the home screen (brief 6: about 100 XP on a normal day).",
+    "dailyXpGoal": 100
+  },
+
+  "character": {
+    "_comment": "Balanced title (brief 8): every stat at least balancedMinLevel and highest minus lowest at most balancedMaxGap. Rank names live in content/character.json.",
+    "balancedMinLevel": 5,
+    "balancedMaxGap": 5
+  },
+
   "habit": {
     "xp": 20,
     "defaultTags": ["DISCIPLINE"]
@@ -66,19 +77,20 @@
   },
 
   "ascension": {
-    "_comment": "Used from milestone 4. multiplier = perAscension ^ number of ASCEND events.",
+    "_comment": "multiplier = perAscension ^ number of ASCEND events (New Game+ after stage 10).",
     "perAscension": 1.05
   },
 
   "stages": {
-    "_comment": "Used from milestone 3. target(k) = baseTarget x growth ^ (k - 1).",
+    "_comment": "Weekly boss (brief 9.1). Boss HP of stage k = baseTarget x growth ^ (k - 1). A week = Monday 04:00 to Monday 04:00. clearRewardCoins: coins paid once when a boss dies (no XP, no stat XP).",
     "count": 10,
     "baseTarget": 800,
-    "growth": 1.3
+    "growth": 1.3,
+    "clearRewardCoins": 100
   },
 
   "statLevels": {
-    "_comment": "Used from milestone 3. XP from level L to L+1 = base x growth ^ (L - 1).",
+    "_comment": "XP from level L to L+1 = base x growth ^ (L - 1). Every stat starts at level 1.",
     "base": 100,
     "growth": 1.15
   },

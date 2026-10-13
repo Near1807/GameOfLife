@@ -41,6 +41,12 @@ public class GameTime {
                 .toLocalDate();
     }
 
+    /** The instant a game week ends: the next Monday at the day-start hour, local time. */
+    public Instant endOfWeek(LocalDate weekStart) {
+        return weekStart.plusDays(7).atTime(config.time().dayStartHour(), 0)
+                .atZone(config.time().zoneId()).toInstant();
+    }
+
     /** Monday of the game week a game day belongs to. */
     public static LocalDate weekStart(LocalDate gameDay) {
         return gameDay.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));

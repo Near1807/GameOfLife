@@ -1,14 +1,21 @@
 import { useEffect, useState } from 'react';
+import { Plus } from 'lucide-react';
 import { api, type Meta, type Suggestion } from '../api';
-import { TagChips } from './TagChips';
+import { Card } from './Card';
+import { StatTagPicker } from './StatTagPicker';
 
 /**
- * Add a task with its name plus ONE chip (brief 3.1): the minute chips are the submit
- * buttons. Enter submits with the preselected chip (the value last used for that name,
- * else the last value used). Autocomplete: tap a known name to add it with its remembered
- * minutes and tags. Adding never pays: only ticking does.
+ * Add a task with its name plus ONE chip (brief 3.1): the duration chips are the submit
+ * buttons, and each shows the XP it will pay once ticked. Enter submits with the preselected
+ * chip (the value last used for that name, else the last value used). Stat tags: 0 to 7,
+ * preselected from the last use of the same name. Adding never pays: only ticking does.
  */
-export function QuickAdd(props: { meta: Meta; onAdded: () => void; onError: (msg: string) => void }) {
+export function QuickAdd(props: {
+  meta: Meta;
+  multiplier: number;
+  onAdded: () => void;
+  onError: (msg: string) => void;
+}) {
   const [name, setName] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagsTouched, setTagsTouched] = useState(false);
@@ -17,6 +24,9 @@ export function QuickAdd(props: { meta: Meta; onAdded: () => void; onError: (msg
 
   const exact = matches.find((m) => m.name.toLowerCase() === name.trim().toLowerCase());
   const preselected = exact?.expectedMinutes ?? props.meta.lastTaskMinutes;
+  const typed = parseInt(custom, 10);
+  const minutesNow = typed > 0 ? typed : preselected;
+  const xpFor = (minutes: number) => Math.round(minutes * props.meta.todo.xpPerMinute * props.multiplier);
 
   useEffect(() => {
     if (name.trim() === '') {
@@ -49,19 +59,19 @@ export function QuickAdd(props: { meta: Meta; onAdded: () => void; onError: (msg
     }
   }
 
+  const sendTags = tagsTouched ? tags : undefined;
+
   return (
-    <div className="panel">
-      <h2>new task</h2>
+    <Card title="New quest" icon={Plus} iconColor="var(--cyan)">
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          const typed = parseInt(custom, 10);
-          add(name, typed > 0 ? typed : preselected, tagsTouched ? tags : undefined);
+          add(name, minutesNow, sendTags);
         }}
       >
         <input
           className="input"
-          placeholder="what will you do?"
+          placeholder="What will you do?"
           value={name}
           onChange={(e) => setName(e.target.value)}
           aria-label="task name"
@@ -70,51 +80,55 @@ export function QuickAdd(props: { meta: Meta; onAdded: () => void; onError: (msg
       </form>
 
       {matches.length > 0 && !exact && (
-        <div className="chips" style={{ marginTop: 8 }}>
+        <div className="chips" style={{ marginTop: 10 }}>
           {matches.slice(0, 4).map((m) => (
-            <button key={m.name} className="chip" onClick={() => add(m.name, m.expectedMinutes, m.tags)}>
-              + {m.name} <span className="dim">{m.expectedMinutes}m</span>
+            <button key={m.name} className="chip pill" onClick={() => add(m.name, m.expectedMinutes, m.tags)}>
+              <Plus size={14} /> {m.name} <span className="faint">{m.expectedMinutes}m</span>
             </button>
           ))}
         </div>
       )}
 
-      <div className="chips" style={{ marginTop: 10 }} aria-label="expected minutes">
+      <div className="label" style={{ margin: '16px 0 8px' }}>
+        Stats it trains
+      </div>
+      <StatTagPicker
+        stats={props.meta.stats}
+        selected={tags}
+        baseXp={minutesNow * props.meta.todo.xpPerMinute}
+        onChange={(t) => {
+          setTags(t);
+          setTagsTouched(true);
+        }}
+      />
+
+      <div className="label" style={{ margin: '16px 0 8px' }}>
+        Expected time · tap to add
+      </div>
+      <div className="chips" aria-label="expected minutes">
         {props.meta.todo.minuteChips.map((m) => (
           <button
             key={m}
             type="button"
-            className={'chip' + (m === preselected ? ' selected' : '')}
+            className={'chip' + (m === preselected && !(typed > 0) ? ' selected' : '')}
             disabled={name.trim() === ''}
-            onClick={() => add(name, m, tagsTouched ? tags : undefined)}
+            aria-label={`${m} minutes`}
+            onClick={() => add(name, m, sendTags)}
           >
-            {m}m
+            <span className="chip-main">{m < 60 ? `${m}m` : `${m / 60}h`}</span>
+            <span className="chip-sub">+{xpFor(m)}</span>
           </button>
         ))}
         <input
-          className="input"
-          style={{ width: 90, minHeight: 44 }}
+          className="input small"
           inputMode="numeric"
           placeholder="min"
           aria-label="custom minutes"
           value={custom}
           onChange={(e) => setCustom(e.target.value.replace(/\D/g, ''))}
-          onKeyDown={(e) => e.key === 'Enter' && add(name, parseInt(custom, 10) || preselected, tagsTouched ? tags : undefined)}
+          onKeyDown={(e) => e.key === 'Enter' && add(name, minutesNow, sendTags)}
         />
       </div>
-
-      {name.trim() !== '' && (
-        <div style={{ marginTop: 10 }}>
-          <TagChips
-            stats={props.meta.stats}
-            selected={tags}
-            onChange={(t) => {
-              setTags(t);
-              setTagsTouched(true);
-            }}
-          />
-        </div>
-      )}
-    </div>
+    </Card>
   );
 }

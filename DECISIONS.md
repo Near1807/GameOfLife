@@ -1,8 +1,146 @@
 # DECISIONS
 
 Every assumption and default applied while building GameLife. Section numbers refer to the build
-brief. Anything here can be changed; numbers are in `config/gamelife.json`, rules are in the
-file named next to them.
+brief; "v2" refers to the version 2 upgrade request, which wins where the two disagree. Numbers
+are in `config/gamelife.json`, rules are in the file named next to them.
+
+## Version 2, step 3 (weekly boss, review, stats dashboard, new art)
+
+Owner decisions applied: keep the level formula; keep the stricter "Balanced" rule; the daily goal
+is config (`home.dailyXpGoal`, 100); hero and boss art moved from step 5 into step 3.
+
+### Weekly boss (brief 9.1, v2 4.4)
+- Rules in `stage/StageRules.java`, pure and computed from the ledger. A game week runs Monday
+  04:00 to Monday 04:00. Damage = the final XP of the week (un-ticks count negative).
+- Stage fought this week = 1 + bosses killed in earlier weeks since the last ascension. A week
+  without a kill therefore replays the same stage, and because damage only counts the current week,
+  the boss is back to full HP. No other penalty.
+- Boss HP = 800 x 1.3^(k-1), rounded to whole HP. **Brief table mismatch:** stage 7 is 3,861 with
+  the formula (800 x 1.3^6 = 3,861.45); the brief's table says 3,862. All other stages match. The
+  formula was kept, as for the level curve.
+- The kill happens at once, inside the payment that crosses the HP: a STAGE_CLEARED event with key
+  `stage:{ascensions}:{weekStart}` (so once per week and cycle), XP 0, and a reward of
+  `stages.clearRewardCoins` = **100 coins** (configurable; set it to 0 for no reward). It is a
+  direct consequence of the owner's own confirmed act and cannot repeat, so it respects 3.2. It
+  gives no XP, so it is neither damage nor stat XP.
+- **Un-tick after a kill:** the damage goes back down, but the kill stays (the ledger is
+  append-only). Accepted: the owner does not cheat himself, and estimates are trusted (brief 6).
+- After stage 10 is cleared there is no boss until the owner ascends. Ascension (New Game+) needs a
+  second tap on the Campaign screen. It writes ASCEND: stage back to 1, weapon level back to 0 (both
+  computed from the ledger), and every later payment gets x1.05 per ascension. Stats are kept.
+  An ascension in the middle of a week starts the new cycle at once, with zero damage.
+- Bosses are data: `content/bosses.json` (name, flavour line, sprite). Ten bosses: Bug Queen,
+  Doomscroll Wraith, Null Pointer, Merge Conflict, Burnout, Kernel Panic, Infinite Loop,
+  Distraction Phantom, Overclock, Entropy.
+
+### Feedback
+- Home shows the boss card (sprite, stage, HP bar, time left in the week). When damage goes up,
+  the sprite flashes and shakes and the bar drains.
+- A kill shows a full-screen "Boss defeated" for 1.4 s with sparks and the coin reward. It never
+  blocks a tap (pointer-events: none). It only appears when the kill happens during the session,
+  not when the app is opened on an already-dead boss. The XP pop is held back while it shows.
+
+### Campaign screen ("Boss" tab)
+- Six tabs on the phone now: Home, Quests, Focus, Habits, Boss, Hero.
+- Boss: the boss card, the campaign map (ten nodes: cleared, current, locked as a silhouette), the
+  ascension card when ready, and the rules.
+- Weekly review: week navigation, the stage result (defeated, in progress, or survived and
+  replays), XP per day with the goal line, stat XP per stat, quests, focus time, habits, average
+  mood, streak at the end of the week, skipped habits (scheduled days before today, after creation,
+  not rest days), and CORRECTION events (none can be written yet; the list is ready).
+- Stats dashboard: last 7, 30 or 90 days; XP of the period, best streak ever, focus hours, bosses
+  defeated, XP per day, streak history, and stat XP per stat.
+
+### Charts and colours
+- Hand-made SVG charts (no library), one series each with the card title naming it, hover or tap
+  for exact values, and dashed goal lines.
+- The seven stat colours were re-picked and checked with a palette validator for dark mode:
+  lightness band, contrast, and colour-blind separation. One pair (blue Intellect next to fuchsia
+  Creativity) sits in the "allowed with a second cue" band. Every stat always shows its icon and
+  name too, so colour is never the only cue. New colours: Strength red, Creativity fuchsia,
+  Intellect blue, Discipline orange, Social green, Vitality violet, Spirit teal.
+
+### Pixel art (brief 11, 12; v2 4.9)
+- `content/tools/make-sprites.mjs` (no dependencies; `npm run sprites`) draws every sprite into
+  a grid of palette indices, so an off-palette colour cannot happen. It uses shapes, mirroring,
+  top-left shading and an automatic 1-pixel outline.
+- Hero (32x32, 4-frame idle at 6 fps): a hooded hacker-mage in an indigo robe, with a glowing cyan
+  visor, a chest rune, a gold belt and a wooden staff topped by a crystal orb. The orb sparkles and
+  the body bobs.
+- Bosses (64x64, 4-frame idle): three body designs (cyber beetle, hooded wraith, mechanical eye),
+  recoloured with palette ramps into ten bosses. They bob and their accents pulse.
+- These are my own designs, not a licensed pack. I think they are clean enough to ship. If you
+  want a different look later, replace the PNG files with the same names and sizes.
+
+## Version 2, steps 1 and 2
+
+### Design system (v2 section 3)
+- Free default theme "Nebula" in `frontend/src/theme.css`, all as CSS tokens: near-black with soft
+  violet/cyan glows, translucent glass cards with blur, thin glowing borders, cyan + violet accents,
+  gold only for XP and coins, one colour token per stat. A shop theme will override tokens only.
+- Fonts: Inter (text), Space Grotesk (headings, big numbers), JetBrains Mono (only for small
+  numbers such as XP previews). Bundled with `@fontsource-variable/*` so the app works without
+  internet access (no Google Fonts call from the phone).
+- Icons: Lucide (`lucide-react` 1.45.0), one set everywhere. Stat icons: Strength dumbbell,
+  Creativity palette, Intellect brain, Discipline target, Social users, Vitality heart-pulse,
+  Spirit sparkles (`frontend/src/stats.ts`). Stat colours were changed in step 3 (see above).
+- Removed: terminal headings, ASCII mood faces, blinking cursor, scanlines (and its setting),
+  console log (replaced by a "Recent activity" feed), monospace body text.
+- Layout: bottom floating tab bar on phones, side rail from 900 px wide, two-column grids on
+  laptops. Tabs: Home, Quests, Focus, Habits, Hero; Settings sits behind the gear in the top bar.
+- Motion: animated bar fills (from the previous value), count-up numbers, page fade-in, press
+  scale, check pop, flame flicker, hero lunge on payout, floating "+XP" with its stat split.
+  All of it is turned off by the reduced-effects switch and by the system "reduce motion" setting.
+- Pixel art only as framed artwork (hero portrait), scaled by whole numbers, never smoothed.
+  The hero and boss art was redone in step 3 (see above).
+
+### Stat tags (v2 4.1)
+- One component, `StatTagPicker`, used by quests, focus, habits and the check-in: seven coloured
+  icon toggles, 0 to 7 selected, and a live preview of the equal split of the base XP
+  ("No stat tag: earns coins only" when empty). The preview uses the same cent rule as the
+  backend, and a test checks they agree.
+- Duration chips show the final XP they will pay (base x current multipliers).
+- Check-in tags: the API now accepts tags. Default = the tags of the last check-in, else Spirit.
+  On the home screen, "Feeds: SPI" opens the picker; the mood tap stays a single tap.
+- Habit tags are chosen at creation (default Discipline). Editing the tags of an existing habit
+  is not offered yet.
+
+### Character sheet (v2 4.2, brief 8)
+- Level formula exactly as in the brief: L to L+1 needs 100 x 1.15^(L-1), every stat starts at 1,
+  overall level = sum of the seven levels - 6. `rules/LevelCurve.java`.
+- **Brief inconsistency:** the brief says 30 stat XP a day reaches level 10 in about 68 days and
+  level 20 in about 340. With the formula above it is about 56 and 294 days; the brief's numbers
+  correspond to counting from level 0. The formula was kept (it is the rule), and the sanity
+  numbers in the test use the formula's values.
+- Class = the two stats with the most XP (ties: config order), named from
+  `content/character.json` (21 pair names, e.g. Intellect + Discipline = "Code Monk"). With fewer
+  than two stats trained: "Unawakened". Rank from the overall level (Novice 1, Apprentice 8,
+  Adept 20, Expert 40, Master 70, Legend 110).
+- "Balanced": every stat at least level 5 (config `balancedMinLevel`) **and** highest minus
+  lowest at most 5. The brief only states the second condition, but then every new character
+  would be "Balanced" on day one. Balanced replaces the class with "Polymath". Cosmetic only.
+- The radar uses level + progress inside the level, so small gains move the shape. Its scale is
+  the highest level rounded up to a multiple of 5.
+- Gear slots are shown (weapon level and multiplier, armour and charm empty) until the shop
+  exists in step 4.
+
+### Home dashboard (v2 4.3)
+- Hero card (portrait, overall level, class, rank, seven stat bars), today's XP against a daily
+  goal (config `home.dailyXpGoal` = 100, from brief 6), coins against the cost of the next weapon
+  upgrade (150 x 1.35^n, the first real thing to buy), streak with multiplier, freezes, next
+  milestone and the "Rest" button, next best action, mood check-in, quick-add, recent activity.
+- Next best action (`frontend/src/nextAction.ts`): check-in if not done; else a habit scheduled
+  today and not done; else the open quest that trains the lowest stat (shortest first); else a
+  focus block. Its "Done" button is the explicit confirmation of that one item, like ticking it.
+
+### Habits screen
+- Per-habit streak (consecutive scheduled days done; unscheduled days and planned rest days are
+  skipped; today does not break it while open). Display only: the XP multiplier still uses the
+  global streak of brief 7.
+- 28-day heat strip per habit: done (stat colour), missed (thin grey outline, never red), off,
+  today. Global streak, freezes and planned rest days shown at the top.
+
+## Version 1 decisions (still valid unless replaced above)
 
 ## Contradictions and open points to check (please read these first)
 
@@ -27,10 +165,10 @@ file named next to them.
 5. **Tests of section 14 not yet written**, because their feature belongs to a later milestone:
    "a purchase with too low a balance is refused" (milestone 4) and "the content validator
    rejects each violation" (milestone 5).
-6. **Art (11, 12).** No licensed asset pack is integrated yet (milestone 5). The hero, flame and
-   coin are placeholders drawn by `content/tools/make-placeholder-sprites.mjs` that already
-   follow the contract: 32x32 hero, 16x16 icons, palette colors only, no semi-transparency,
-   4-frame idle sheet at 6 fps.
+6. **Art (11, 12).** No licensed asset pack: the hero and the ten bosses are original sprites
+   drawn by `content/tools/make-sprites.mjs` (see version 2, step 3). The old
+   `make-placeholder-sprites.mjs` only still draws the flame and coin icons, which the interface
+   no longer uses; they stay as contract examples.
 
 ## Ledger and data (5)
 
@@ -131,16 +269,10 @@ file named next to them.
 
 ## Interface (3.1, 11)
 
-- The default theme is design tokens (CSS variables) in `frontend/src/theme.css`: near-black
-  background, neon green for actions, cyan for info, gold only for XP and rewards, monospace font,
-  optional CRT scanlines, blinking cursor, console log of events.
-- Every tappable control is at least 44 px tall (52 px for main buttons).
-- Feedback in this milestone: XP number pop with stat names (1.2 s, pointer-events none, never
-  blocks), hero lunge, a short 8-bit sound made with Web Audio (no sound files yet). Orbs, boss
-  damage and celebrations come with milestone 3 and 5.
-- The streak flame grows at 7, 30, 100 and 365 days by whole-number scaling.
-- Reduced effects, sound and scanlines switches are stored per device (browser localStorage),
-  since they are display preferences and not game data.
+- Replaced by the version 2 design system above. Still true: every tappable control is at least
+  44 px, animations last under 1.5 s and never block the next tap, the reduced-effects and sound
+  switches are stored per device (browser localStorage), and the sound is a short chime made with
+  Web Audio (no sound files yet).
 
 ## Backup (3.3, 5)
 

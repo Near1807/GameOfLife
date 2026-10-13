@@ -20,6 +20,8 @@ public record GameConfig(
         Time time,
         List<Stat> stats,
         Todo todo,
+        Home home,
+        Character character,
         Timer timer,
         Habit habit,
         Checkin checkin,
@@ -40,6 +42,10 @@ public record GameConfig(
 
     public record Todo(double xpPerMinute, List<Integer> minuteChips, int defaultMinutes, int suggestionCount) {}
 
+    public record Home(double dailyXpGoal) {}
+
+    public record Character(int balancedMinLevel, int balancedMaxGap) {}
+
     public record Timer(double xpPerMinute, List<Integer> minuteChips, int minMinutes, int maxMinutes,
                         int defaultMinutes, int earlyStopMinMinutes, List<String> defaultTags) {}
 
@@ -55,7 +61,12 @@ public record GameConfig(
 
     public record Ascension(double perAscension) {}
 
-    public record Stages(int count, double baseTarget, double growth) {}
+    public record Stages(int count, double baseTarget, double growth, double clearRewardCoins) {
+        /** Boss HP of stage k (1-based). */
+        public double target(int stage) {
+            return Math.round(baseTarget * Math.pow(growth, stage - 1)); // whole HP, as in the brief table
+        }
+    }
 
     public record StatLevels(double base, double growth) {}
 

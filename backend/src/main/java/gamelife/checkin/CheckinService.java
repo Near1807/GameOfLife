@@ -13,6 +13,7 @@ import gamelife.rules.Tags;
 import gamelife.time.GameTime;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -38,13 +39,30 @@ public class CheckinService {
         return ledger.find(key()).map(e -> ((Number) Json.toMap(e.meta()).get("mood")).intValue()).orElse(null);
     }
 
-    public ActionResult checkin(int mood) {
+    /**
+     * The one tap. tags: the stats this check-in feeds (0 to 7). null = the tags of the last
+     * check-in, or the configured default (Spirit) the first time.
+     */
+    public ActionResult checkin(int mood, List<String> tags) {
         if (mood < 1 || mood > config.checkin().moodLevels()) {
             throw GameException.badRequest("Mood must be between 1 and " + config.checkin().moodLevels());
         }
+        List<String> t = tags != null ? Tags.clean(tags, config) : lastTags();
         return payout.pay(new PayRequest(key(), EventType.CHECKIN, "checkin", "Mood check-in",
-                Money.of(config.checkin().xp()), Tags.clean(config.checkin().defaultTags(), config),
-                Map.of("mood", mood)));
+                Money.of(config.checkin().xp()), t, Map.of("mood", mood)));
+    }
+
+    public ActionResult checkin(int mood) {
+        return checkin(mood, null);
+    }
+
+    /** Tags of the most recent check-in, else the configured default. */
+    @SuppressWarnings("unchecked")
+    public List<String> lastTags() {
+        return ledger.byKeyPrefix("checkin:").stream()
+                .reduce((a, b) -> b)
+                .map(e -> (List<String>) Json.toMap(e.meta()).get("tags"))
+                .orElse(Tags.clean(config.checkin().defaultTags(), config));
     }
 
     private String key() {
