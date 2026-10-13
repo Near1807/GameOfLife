@@ -315,7 +315,62 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return data as T;
 }
 
+// ---------------------------------------------------------------- tower defense (v4)
+
+export interface PathView { name: string; tier: number; locked: boolean; price: number | null; next: string | null; tiers: string[] }
+
+export interface TowerView {
+  type: string; name: string; kind: string; role: 'attack' | 'support' | 'income'; color: string; shape: string;
+  a: number; b: number; paid: number;
+  stats: { dmg: number; rate: number; range: number; rad: number; slow: number; burn: number; pois: number; chain: number;
+    multi: number; pierce: number; rbuff: number; dbuff: number; coin: number; disc: number };
+  paths: PathView[];
+}
+
+export interface SpotView { index: number; x: number; y: number; open: boolean; tower: TowerView | null }
+
+export interface TowerOption {
+  id: string; name: string; kind: string; role: string; color: string; shape: string; price: number; listPrice: number;
+  locked: string | null;
+}
+
+export interface AttemptView {
+  key: string; wave: number; attempt: number; won: boolean; manual: boolean; at: string; lives: number; livesMax: number;
+  enemies: number; killed: number; leaked: number; seconds: number;
+}
+
+export interface EnemyView { name: string; color: string; radius: number; air: boolean; armor: number; ward: number }
+
+export interface DefenseView {
+  mapId: string; mapName: string; width: number; height: number; path: [number, number][]; base: [number, number];
+  spots: SpotView[]; towers: TowerOption[]; wave: number; furthestCleared: number; livesMax: number;
+  status: 'idle' | 'waiting' | 'stuck' | 'capped'; nextAt: string | null; attemptsToday: number; maxAttemptsPerDay: number;
+  balance: number; incomeMultiplier: number; discount: number; nextSpotCost: number;
+  last: AttemptView | null; recent: AttemptView[]; enemies: Record<string, EnemyView>; stats: Record<string, number>;
+}
+
+/** One replay sample. enemies: [id, x, y, hp %, flags 1 slowed 2 burning 4 poisoned]. */
+export interface ReplayFrame {
+  t: number; lives: number; enemies: number[][]; shots: number[][]; chains: number[][]; pops: number[][];
+}
+
+export interface Watch {
+  attempt: { key: string; wave: number; attempt: number; won: boolean; manual: boolean; at: string };
+  result: { wave: number; won: boolean; lives: number; livesMax: number; enemies: number; killed: number; leaked: number;
+    seconds: number; replay: { fps: number; types: string[]; frames: ReplayFrame[] } };
+  sameAsRecorded: boolean;
+}
+
 export const api = {
+  game: () => request<DefenseView>('GET', '/api/game'),
+  unlockSpot: (spot: number) => request<ActionResult>('POST', '/api/game/unlock', { spot }),
+  buildTower: (spot: number, tower: string) => request<ActionResult>('POST', '/api/game/build', { spot, tower }),
+  upgradeTower: (spot: number, path: number, tier: number) =>
+    request<ActionResult>('POST', '/api/game/upgrade', { spot, path, tier }),
+  sellTower: (spot: number) => request<ActionResult>('POST', '/api/game/sell', { spot, confirm: true }),
+  runWave: () => request<ActionResult>('POST', '/api/game/run'),
+  replay: (key?: string) => request<Watch>('GET', '/api/game/replay' + (key ? `?key=${encodeURIComponent(key)}` : '')),
+
   state: () => request<GameState>('GET', '/api/state'),
   meta: () => request<Meta>('GET', '/api/meta'),
   character: () => request<Character>('GET', '/api/character'),

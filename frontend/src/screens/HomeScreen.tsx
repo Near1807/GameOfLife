@@ -8,6 +8,7 @@ import { statStyle } from '../stats';
 import type { Act, Screen } from '../types';
 import { Bar } from '../ui/Bar';
 import { Card } from '../ui/Card';
+import { DefenseCard } from '../ui/DefenseCard';
 import { CountUp } from '../ui/CountUp';
 import { HeroPortrait } from '../ui/HeroPortrait';
 import { MoodPicker } from '../ui/MoodPicker';
@@ -52,7 +53,7 @@ export function HomeScreen(props: {
 
   return (
     <div className="page">
-    {props.arena}
+    <DefenseCard act={props.act} version={props.version} filter={state.look.arenaFilter} />
     <div className="grid home">
       {/* hero */}
       <Card glow>

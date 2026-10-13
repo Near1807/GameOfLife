@@ -9,10 +9,17 @@ import org.springframework.web.bind.annotation.*;
 public class GameController {
     private final GameService game;
     private final WaveService waves;
+    private final GameViewService views;
 
-    public GameController(GameService game, WaveService waves) {
+    public GameController(GameService game, WaveService waves, GameViewService views) {
         this.game = game;
         this.waves = waves;
+        this.views = views;
+    }
+
+    @GetMapping
+    public GameViewService.GameView view() {
+        return views.view();
     }
 
     public record SpotInput(int spot) {}

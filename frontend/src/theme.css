@@ -741,3 +741,42 @@ button { -webkit-user-select: none; user-select: none; }
 .badge.on .badge-icon, .badge-icon.on { color: var(--gold); background: var(--gold-soft); border-color: rgba(251, 191, 36, 0.4); box-shadow: var(--glow-gold); }
 .unlock { position: fixed; left: 50%; top: 18px; transform: translateX(-50%); z-index: 95; display: flex; gap: 12px; align-items: center; padding: 10px 16px 10px 10px; border-radius: 16px; background: var(--surface-2); backdrop-filter: blur(var(--blur)); -webkit-backdrop-filter: blur(var(--blur)); border: 1px solid rgba(251, 191, 36, 0.45); box-shadow: var(--shadow), var(--glow-gold); animation: unlock-in 0.5s var(--ease); pointer-events: none; }
 @keyframes unlock-in { from { opacity: 0; transform: translate(-50%, -20px) scale(0.9); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* ---------------------------------------------------------------- tower defense (v4) */
+.defense-card { margin-bottom: var(--gap); }
+.defense-hud { gap: 6px; margin-bottom: 10px; }
+.defense-wrap { position: relative; }
+.defense-map {
+  display: block; width: 100%; aspect-ratio: 16 / 9; cursor: pointer; touch-action: manipulation;
+  border-radius: var(--radius-sm); border: 1px solid var(--border-strong);
+  background: radial-gradient(ellipse at 30% 20%, rgba(124, 92, 255, 0.10), transparent 60%), #070a14;
+}
+.defense-result {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; text-align: center; border-radius: var(--radius-sm); background: rgba(6, 7, 12, 0.72);
+  backdrop-filter: blur(4px); animation: fade-in var(--fast) var(--ease);
+}
+.defense-result b { font-family: var(--font-display); font-size: 26px; }
+.defense-result.won b { color: var(--success); }
+.defense-result.lost b { color: var(--gold); }
+.spot-panel { margin-top: 12px; padding: 12px; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--border); }
+.opt-list { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.opt {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: var(--tap); padding: 8px 12px; text-align: left;
+  font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  cursor: pointer; transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease);
+}
+.opt:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--border-strong); }
+.opt:disabled { opacity: 0.45; cursor: not-allowed; }
+.opt small { display: block; color: var(--text-2); font-size: 12px; }
+.opt .price { color: var(--gold); font-weight: 650; margin-left: auto; }
+.opt.danger { border-color: rgba(251, 191, 36, 0.6); background: var(--gold-soft); }
+.pips { color: var(--cyan); letter-spacing: 2px; font-size: 12px; }
+.defense-controls { gap: 8px; margin-top: 10px; }
+.defense-controls .btn { flex: 1 1 auto; }
+.defense-stage { position: relative; }
+.spot-hit {
+  position: absolute; width: 8%; aspect-ratio: 1; transform: translate(-50%, -50%); padding: 0; border: none;
+  border-radius: 50%; background: transparent; cursor: pointer; min-width: 30px;
+}
+.spot-hit:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
