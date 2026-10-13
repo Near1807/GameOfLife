@@ -3,12 +3,14 @@
 # desktop shell tests (server start/stop, local-only port, offline, jlink runtime, Electron e2e).
 #
 # Start it: push a tag (git tag v0.4.1 && git push origin v0.4.1), or "Run workflow" in the
-# Actions tab (then the installer is only an artifact of the run, not a release).
+# Actions tab (then the installer is only an artifact of the run, not a release). Every pull
+# request also builds and tests it, so a broken Windows build shows before merging.
 name: Windows installer
 
 on:
   push:
     tags: ['v*']
+  pull_request:
   workflow_dispatch:
 
 permissions:
