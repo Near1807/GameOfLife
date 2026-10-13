@@ -1,0 +1,884 @@
+{
+  "_comment": "Tower catalogue (v4 brief 2), ported from the prototype. Each tier lists stat changes: mul multiplies, add adds, set replaces. role: attack, support (Banner aura) or income (Market). requires: a stat level needed to build. Adding a tower or a path is a data change.",
+  "contractVersion": 1,
+  "towers": [
+    {
+      "id": "archer",
+      "name": "Archer",
+      "kind": "Physical, single target",
+      "cost": 100,
+      "color": "#5af0b4",
+      "shape": "dot",
+      "requires": null,
+      "base": {
+        "dmg": 12,
+        "rate": 1.1,
+        "range": 125,
+        "rad": 0,
+        "slow": 0,
+        "slowT": 0,
+        "burn": 0,
+        "pierce": 0,
+        "multi": 1,
+        "phys": true,
+        "air": true,
+        "chain": 0,
+        "pois": 0,
+        "spread": false,
+        "pslow": 0,
+        "rbuff": 0,
+        "dbuff": 0,
+        "coin": 0,
+        "disc": 0
+      },
+      "paths": [
+        {
+          "name": "Sniper",
+          "tiers": [
+            {
+              "cost": 90,
+              "description": "+50% damage, +25 range",
+              "set": {
+                "dmg": {
+                  "mul": 1.5
+                },
+                "range": {
+                  "add": 25
+                }
+              }
+            },
+            {
+              "cost": 220,
+              "description": "+50% damage, +25 range",
+              "set": {
+                "dmg": {
+                  "mul": 1.5
+                },
+                "range": {
+                  "add": 25
+                }
+              }
+            },
+            {
+              "cost": 520,
+              "description": "+80% damage, +40 range, ignores half of armor",
+              "set": {
+                "dmg": {
+                  "mul": 1.8
+                },
+                "range": {
+                  "add": 40
+                },
+                "pierce": {
+                  "set": 0.5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rapid",
+          "tiers": [
+            {
+              "cost": 80,
+              "description": "+50% fire rate",
+              "set": {
+                "rate": {
+                  "mul": 1.5
+                }
+              }
+            },
+            {
+              "cost": 200,
+              "description": "+50% fire rate",
+              "set": {
+                "rate": {
+                  "mul": 1.5
+                }
+              }
+            },
+            {
+              "cost": 480,
+              "description": "+60% fire rate, hits 2 targets",
+              "set": {
+                "rate": {
+                  "mul": 1.6
+                },
+                "multi": {
+                  "set": 2
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "role": "attack"
+    },
+    {
+      "id": "cannon",
+      "name": "Cannon",
+      "kind": "Physical, area, ground only",
+      "cost": 180,
+      "color": "#ffb454",
+      "shape": "square",
+      "requires": {
+        "stat": "STRENGTH",
+        "level": 3
+      },
+      "base": {
+        "dmg": 22,
+        "rate": 0.55,
+        "range": 105,
+        "rad": 45,
+        "slow": 0,
+        "slowT": 0,
+        "burn": 0,
+        "pierce": 0,
+        "multi": 1,
+        "phys": true,
+        "air": false,
+        "chain": 0,
+        "pois": 0,
+        "spread": false,
+        "pslow": 0,
+        "rbuff": 0,
+        "dbuff": 0,
+        "coin": 0,
+        "disc": 0
+      },
+      "paths": [
+        {
+          "name": "Heavy",
+          "tiers": [
+            {
+              "cost": 140,
+              "description": "+60% damage, bigger blast",
+              "set": {
+                "dmg": {
+                  "mul": 1.6
+                },
+                "rad": {
+                  "add": 12
+                }
+              }
+            },
+            {
+              "cost": 340,
+              "description": "+60% damage, bigger blast",
+              "set": {
+                "dmg": {
+                  "mul": 1.6
+                },
+                "rad": {
+                  "add": 13
+                }
+              }
+            },
+            {
+              "cost": 800,
+              "description": "+70% damage, much bigger blast",
+              "set": {
+                "dmg": {
+                  "mul": 1.7
+                },
+                "rad": {
+                  "add": 15
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Barrage",
+          "tiers": [
+            {
+              "cost": 130,
+              "description": "+50% fire rate",
+              "set": {
+                "rate": {
+                  "mul": 1.5
+                }
+              }
+            },
+            {
+              "cost": 300,
+              "description": "+50% fire rate",
+              "set": {
+                "rate": {
+                  "mul": 1.5
+                }
+              }
+            },
+            {
+              "cost": 700,
+              "description": "+50% fire rate, bigger blast",
+              "set": {
+                "rate": {
+                  "mul": 1.5
+                },
+                "rad": {
+                  "add": 15
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "role": "attack"
+    },
+    {
+      "id": "frost",
+      "name": "Frost",
+      "kind": "Magic, slows enemies",
+      "cost": 120,
+      "color": "#4de1ff",
+      "shape": "snow",
+      "requires": {
+        "stat": "SPIRIT",
+        "level": 3
+      },
+      "base": {
+        "dmg": 3,
+        "rate": 1,
+        "range": 100,
+        "rad": 0,
+        "slow": 0.35,
+        "slowT": 1.6,
+        "burn": 0,
+        "pierce": 0,
+        "multi": 1,
+        "phys": false,
+        "air": true,
+        "chain": 0,
+        "pois": 0,
+        "spread": false,
+        "pslow": 0,
+        "rbuff": 0,
+        "dbuff": 0,
+        "coin": 0,
+        "disc": 0
+      },
+      "paths": [
+        {
+          "name": "Deep freeze",
+          "tiers": [
+            {
+              "cost": 90,
+              "description": "Slow 50%",
+              "set": {
+                "slow": {
+                  "set": 0.5
+                }
+              }
+            },
+            {
+              "cost": 220,
+              "description": "Slow 62%, lasts longer",
+              "set": {
+                "slow": {
+                  "set": 0.62
+                },
+                "slowT": {
+                  "set": 2.4
+                }
+              }
+            },
+            {
+              "cost": 500,
+              "description": "Slow 75%, shatter: x5 damage",
+              "set": {
+                "slow": {
+                  "set": 0.75
+                },
+                "dmg": {
+                  "mul": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Blizzard",
+          "tiers": [
+            {
+              "cost": 110,
+              "description": "Slows all enemies near the target",
+              "set": {
+                "rad": {
+                  "set": 60
+                }
+              }
+            },
+            {
+              "cost": 260,
+              "description": "Bigger area, +30 range",
+              "set": {
+                "rad": {
+                  "set": 80
+                },
+                "range": {
+                  "add": 30
+                }
+              }
+            },
+            {
+              "cost": 600,
+              "description": "Huge area, x3 damage",
+              "set": {
+                "rad": {
+                  "set": 110
+                },
+                "dmg": {
+                  "mul": 3
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "role": "attack"
+    },
+    {
+      "id": "mage",
+      "name": "Mage",
+      "kind": "Magic, single target",
+      "cost": 220,
+      "color": "#9b7bff",
+      "shape": "triangle",
+      "requires": {
+        "stat": "INTELLECT",
+        "level": 3
+      },
+      "base": {
+        "dmg": 20,
+        "rate": 0.8,
+        "range": 115,
+        "rad": 0,
+        "slow": 0,
+        "slowT": 0,
+        "burn": 0,
+        "pierce": 0,
+        "multi": 1,
+        "phys": false,
+        "air": true,
+        "chain": 0,
+        "pois": 0,
+        "spread": false,
+        "pslow": 0,
+        "rbuff": 0,
+        "dbuff": 0,
+        "coin": 0,
+        "disc": 0
+      },
+      "paths": [
+        {
+          "name": "Fire",
+          "tiers": [
+            {
+              "cost": 150,
+              "description": "Sets target on fire (6/s)",
+              "set": {
+                "burn": {
+                  "set": 6
+                }
+              }
+            },
+            {
+              "cost": 340,
+              "description": "Splash, stronger fire (12/s)",
+              "set": {
+                "rad": {
+                  "set": 35
+                },
+                "burn": {
+                  "set": 12
+                }
+              }
+            },
+            {
+              "cost": 760,
+              "description": "Inferno: 25/s, +50% damage, big splash",
+              "set": {
+                "burn": {
+                  "set": 25
+                },
+                "rad": {
+                  "set": 55
+                },
+                "dmg": {
+                  "mul": 1.5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Arcane",
+          "tiers": [
+            {
+              "cost": 140,
+              "description": "+70% damage",
+              "set": {
+                "dmg": {
+                  "mul": 1.7
+                }
+              }
+            },
+            {
+              "cost": 330,
+              "description": "+65% damage, +30 range",
+              "set": {
+                "dmg": {
+                  "mul": 1.65
+                },
+                "range": {
+                  "add": 30
+                }
+              }
+            },
+            {
+              "cost": 780,
+              "description": "+80% damage, ignores all resistance",
+              "set": {
+                "dmg": {
+                  "mul": 1.8
+                },
+                "pierce": {
+                  "set": 1
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "role": "attack"
+    },
+    {
+      "id": "tesla",
+      "name": "Tesla",
+      "kind": "Magic, chain lightning",
+      "cost": 260,
+      "color": "#7aa2ff",
+      "shape": "bolt",
+      "requires": {
+        "stat": "INTELLECT",
+        "level": 5
+      },
+      "base": {
+        "dmg": 14,
+        "rate": 0.9,
+        "range": 105,
+        "rad": 0,
+        "slow": 0,
+        "slowT": 0,
+        "burn": 0,
+        "pierce": 0,
+        "multi": 1,
+        "phys": false,
+        "air": true,
+        "chain": 2,
+        "pois": 0,
+        "spread": false,
+        "pslow": 0,
+        "rbuff": 0,
+        "dbuff": 0,
+        "coin": 0,
+        "disc": 0
+      },
+      "paths": [
+        {
+          "name": "Storm",
+          "tiers": [
+            {
+              "cost": 200,
+              "description": "Lightning jumps to 1 more enemy",
+              "set": {
+                "chain": {
+                  "add": 1
+                }
+              }
+            },
+            {
+              "cost": 430,
+              "description": "Jumps to 1 more enemy, +30% damage",
+              "set": {
+                "chain": {
+                  "add": 1
+                },
+                "dmg": {
+                  "mul": 1.3
+                }
+              }
+            },
+            {
+              "cost": 900,
+              "description": "Jumps to 2 more enemies, +40% damage",
+              "set": {
+                "chain": {
+                  "add": 2
+                },
+                "dmg": {
+                  "mul": 1.4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Overload",
+          "tiers": [
+            {
+              "cost": 190,
+              "description": "+60% damage",
+              "set": {
+                "dmg": {
+                  "mul": 1.6
+                }
+              }
+            },
+            {
+              "cost": 420,
+              "description": "+60% damage, +20 range",
+              "set": {
+                "dmg": {
+                  "mul": 1.6
+                },
+                "range": {
+                  "add": 20
+                }
+              }
+            },
+            {
+              "cost": 880,
+              "description": "+80% damage, ignores half of resistance",
+              "set": {
+                "dmg": {
+                  "mul": 1.8
+                },
+                "pierce": {
+                  "set": 0.5
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "role": "attack"
+    },
+    {
+      "id": "venom",
+      "name": "Venom",
+      "kind": "Poison over time, ignores armor",
+      "cost": 200,
+      "color": "#b6f24d",
+      "shape": "drop",
+      "requires": {
+        "stat": "VITALITY",
+        "level": 4
+      },
+      "base": {
+        "dmg": 2,
+        "rate": 1.2,
+        "range": 110,
+        "rad": 0,
+        "slow": 0,
+        "slowT": 0,
+        "burn": 0,
+        "pierce": 0,
+        "multi": 1,
+        "phys": false,
+        "air": true,
+        "chain": 0,
+        "pois": 6,
+        "spread": false,
+        "pslow": 0,
+        "rbuff": 0,
+        "dbuff": 0,
+        "coin": 0,
+        "disc": 0
+      },
+      "paths": [
+        {
+          "name": "Plague",
+          "tiers": [
+            {
+              "cost": 150,
+              "description": "Poison 10/s",
+              "set": {
+                "pois": {
+                  "set": 10
+                }
+              }
+            },
+            {
+              "cost": 350,
+              "description": "Poison 16/s, hits 2 targets",
+              "set": {
+                "pois": {
+                  "set": 16
+                },
+                "multi": {
+                  "set": 2
+                }
+              }
+            },
+            {
+              "cost": 780,
+              "description": "Poison 24/s, spreads to neighbors when the victim dies",
+              "set": {
+                "pois": {
+                  "set": 24
+                },
+                "spread": {
+                  "set": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Toxin",
+          "tiers": [
+            {
+              "cost": 150,
+              "description": "Poison 14/s",
+              "set": {
+                "pois": {
+                  "set": 14
+                }
+              }
+            },
+            {
+              "cost": 350,
+              "description": "Poison 26/s, +20 range",
+              "set": {
+                "pois": {
+                  "set": 26
+                },
+                "range": {
+                  "add": 20
+                }
+              }
+            },
+            {
+              "cost": 780,
+              "description": "Poison 45/s and slows 20%",
+              "set": {
+                "pois": {
+                  "set": 45
+                },
+                "pslow": {
+                  "set": 0.2
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "role": "attack"
+    },
+    {
+      "id": "banner",
+      "name": "Banner",
+      "kind": "Support: buffs towers nearby",
+      "cost": 230,
+      "color": "#ff8fb1",
+      "shape": "flag",
+      "requires": {
+        "stat": "SOCIAL",
+        "level": 4
+      },
+      "base": {
+        "dmg": 0,
+        "rate": 0,
+        "range": 110,
+        "rad": 0,
+        "slow": 0,
+        "slowT": 0,
+        "burn": 0,
+        "pierce": 0,
+        "multi": 1,
+        "phys": true,
+        "air": true,
+        "chain": 0,
+        "pois": 0,
+        "spread": false,
+        "pslow": 0,
+        "rbuff": 0.05,
+        "dbuff": 0.05,
+        "coin": 0,
+        "disc": 0
+      },
+      "paths": [
+        {
+          "name": "Rally",
+          "tiers": [
+            {
+              "cost": 180,
+              "description": "Nearby fire rate +12%",
+              "set": {
+                "rbuff": {
+                  "set": 0.12
+                }
+              }
+            },
+            {
+              "cost": 400,
+              "description": "Nearby fire rate +20%, +20 range",
+              "set": {
+                "rbuff": {
+                  "set": 0.2
+                },
+                "range": {
+                  "add": 20
+                }
+              }
+            },
+            {
+              "cost": 850,
+              "description": "Nearby fire rate +30%",
+              "set": {
+                "rbuff": {
+                  "set": 0.3
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Warcry",
+          "tiers": [
+            {
+              "cost": 180,
+              "description": "Nearby damage +12%",
+              "set": {
+                "dbuff": {
+                  "set": 0.12
+                }
+              }
+            },
+            {
+              "cost": 400,
+              "description": "Nearby damage +22%, +20 range",
+              "set": {
+                "dbuff": {
+                  "set": 0.22
+                },
+                "range": {
+                  "add": 20
+                }
+              }
+            },
+            {
+              "cost": 850,
+              "description": "Nearby damage +35%",
+              "set": {
+                "dbuff": {
+                  "set": 0.35
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "role": "support"
+    },
+    {
+      "id": "income",
+      "name": "Market",
+      "kind": "No attack. Boosts your real earnings",
+      "cost": 250,
+      "color": "#ffc857",
+      "shape": "coin",
+      "requires": null,
+      "base": {
+        "dmg": 0,
+        "rate": 0,
+        "range": 0,
+        "rad": 0,
+        "slow": 0,
+        "slowT": 0,
+        "burn": 0,
+        "pierce": 0,
+        "multi": 1,
+        "phys": true,
+        "air": true,
+        "chain": 0,
+        "pois": 0,
+        "spread": false,
+        "pslow": 0,
+        "rbuff": 0,
+        "dbuff": 0,
+        "coin": 0.06,
+        "disc": 0
+      },
+      "paths": [
+        {
+          "name": "Commerce",
+          "tiers": [
+            {
+              "cost": 200,
+              "description": "Earnings bonus 10%",
+              "set": {
+                "coin": {
+                  "set": 0.1
+                }
+              }
+            },
+            {
+              "cost": 450,
+              "description": "Earnings bonus 16%",
+              "set": {
+                "coin": {
+                  "set": 0.16
+                }
+              }
+            },
+            {
+              "cost": 1000,
+              "description": "Earnings bonus 25%",
+              "set": {
+                "coin": {
+                  "set": 0.25
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bargain",
+          "tiers": [
+            {
+              "cost": 200,
+              "description": "Everything costs 5% less",
+              "set": {
+                "disc": {
+                  "set": 0.05
+                }
+              }
+            },
+            {
+              "cost": 450,
+              "description": "Everything costs 9% less",
+              "set": {
+                "disc": {
+                  "set": 0.09
+                }
+              }
+            },
+            {
+              "cost": 1000,
+              "description": "Everything costs 15% less",
+              "set": {
+                "disc": {
+                  "set": 0.15
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "role": "income"
+    }
+  ]
+}
