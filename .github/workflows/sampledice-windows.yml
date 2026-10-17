@@ -1,0 +1,33 @@
+# Compile le plugin SampleDice (VST3 + Standalone) sous Windows / MSVC et publie le .vst3
+# comme artefact téléchargeable de la run (onglet Actions > la run > Artifacts).
+name: SampleDice (Windows)
+
+on:
+  push:
+    paths: ['SampleDice/**', '.github/workflows/sampledice-windows.yml']
+  pull_request:
+    paths: ['SampleDice/**', '.github/workflows/sampledice-windows.yml']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: SampleDice
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -DSAMPLEDICE_COPY_PLUGIN=OFF
+
+      - name: Build (Release)
+        run: cmake --build build --config Release --parallel
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SampleDice-Windows
+          path: |
+            SampleDice/build/SampleDice_artefacts/Release/VST3/SampleDice.vst3
+            SampleDice/build/SampleDice_artefacts/Release/Standalone/SampleDice.exe
